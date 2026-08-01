@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Typeform Flow Demo",
-  description: "A Typeform-style multi-step form with branching logic, motion, and keyboard navigation.",
+  title: "Offset Form",
+  description: "A focused, responsive form experience with branching logic and cinematic motion.",
 };
 
 export default function RootLayout({

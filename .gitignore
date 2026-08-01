@@ -1,29 +1,27 @@
-.next
-.next/cache
-.vercel
-node_modules
-out
-coverage
-dist
-.turbo
-.cache
-.eslintcache
+# Dependencies and build output
+node_modules/
+.next/
+out/
+dist/
+.vercel/
+.turbo/
+.cache/
+coverage/
 *.tsbuildinfo
-tsconfig.tsbuildinfo
-npm-debug.log*
-pnpm-debug.log*
-yarn-debug.log*
-yarn-error.log*
+
+# Environment files
+.env*
+!.env.example
+
+# Logs and local tooling
 *.log
-.DS_Store
-Thumbs.db
-desktop.ini
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.eslintcache
 .idea/
 .vscode/
 *.swp
 *.swo
+
+# Operating-system files
+.DS_Store
+Thumbs.db
+desktop.ini

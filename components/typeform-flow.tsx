@@ -1,430 +1,239 @@
 "use client";
 
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "framer-motion";
 import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
-  AnswerMap,
+  type AnswerMap,
   getQuestionByIndex,
   questionSchema,
   resolveNextQuestionIndex,
   startQuestionIndex,
-  totalQuestions,
   validateQuestion,
 } from "../lib/flow";
 
 const STORAGE_KEY = "typeform-flow-demo";
-
-function isValidIndex(value: number) {
-  return Number.isInteger(value) && value >= 0 && value < questionSchema.length;
-}
+const THEME_KEY = "typeform-flow-theme";
+type Theme = "dark" | "light";
 
 export function TypeformFlow() {
-  const [hasStarted, setHasStarted] = useState(false);
+  const [started, setStarted] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitOrigin, setSubmitOrigin] = useState({ x: 0, y: 150 });
   const [answers, setAnswers] = useState<AnswerMap>({});
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(startQuestionIndex);
+  const [index, setIndex] = useState(startQuestionIndex);
   const [history, setHistory] = useState<number[]>([]);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [error, setError] = useState<string | null>(null);
-  const [typingTick, setTypingTick] = useState(0);
+  const [theme, setTheme] = useState<Theme>("dark");
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
+  const reducedMotion = useReducedMotion();
+  const [forceMotion, setForceMotion] = useState(true);
+  const effectiveReducedMotion = reducedMotion && !forceMotion;
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-
-    if (!stored) {
-      return;
-    }
-
     try {
-      const parsed = JSON.parse(stored) as { answers?: AnswerMap };
-      if (parsed.answers) {
-        setAnswers(parsed.answers);
-      }
-    } catch {
-      window.localStorage.removeItem(STORAGE_KEY);
-    }
+      const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as { answers?: AnswerMap };
+      if (saved.answers) setAnswers(saved.answers);
+      const savedTheme = window.localStorage.getItem(THEME_KEY) as Theme | null;
+      if (savedTheme === "light" || savedTheme === "dark") setTheme(savedTheme);
+  } catch {
+    window.localStorage.removeItem(STORAGE_KEY);
+  }
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem("typeform-force-motion");
+      if (saved !== null) setForceMotion(saved === "1");
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (forceMotion) document.documentElement.classList.add("force-motion");
+    else document.documentElement.classList.remove("force-motion");
+    try { window.localStorage.setItem("typeform-force-motion", forceMotion ? "1" : "0"); } catch {}
+  }, [forceMotion]);
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers }));
   }, [answers]);
 
   useEffect(() => {
-    if (!hasStarted) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => {
-      inputRef.current?.focus();
-    }, 160);
-
+    if (!started || submitted) return;
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 330);
     return () => window.clearTimeout(timer);
-  }, [hasStarted, currentQuestionIndex]);
+  }, [started, submitted, index]);
+
+  const question = started && !submitted ? getQuestionByIndex(index) : null;
+  const value = question ? answers[question.id] ?? "" : "";
+  const journeyLength = answers.goal === "physical_product" ? 6 : 4;
+  const currentStep = history.length + 1;
+  const progress = useMemo(() => (started ? (currentStep / journeyLength) * 100 : 0), [started, currentStep, journeyLength]);
+
+  function begin() {
+    setAnswers({});
+    window.localStorage.removeItem(STORAGE_KEY);
+    setStarted(true); setSubmitted(false); setSubmitting(false); setIndex(startQuestionIndex); setHistory([]); setError(null); setDirection(1);
+  }
+
+  function returnToWelcome() {
+    setAnswers({});
+    window.localStorage.removeItem(STORAGE_KEY);
+    setStarted(false); setSubmitted(false); setSubmitting(false); setIndex(startQuestionIndex); setHistory([]); setError(null); setDirection(-1);
+  }
 
   useEffect(() => {
-    if (!hasStarted) {
+    if (started) return;
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Enter") { event.preventDefault(); begin(); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [started]);
+
+  function next(answer?: string) {
+    if (!question) return;
+    const nextValue = answer ?? value;
+    const validation = validateQuestion(question, nextValue);
+    if (validation) { setError(validation); return; }
+    setAnswers((current) => ({ ...current, [question.id]: nextValue }));
+    setError(null);
+    const nextIndex = resolveNextQuestionIndex(index, nextValue, answers);
+    if (nextIndex === null) {
+      const submitButton = document.querySelector<HTMLElement>("[data-submit-button]");
+      const rect = submitButton?.getBoundingClientRect();
+      if (rect) setSubmitOrigin({ x: rect.left + rect.width / 2 - window.innerWidth / 2, y: rect.top + rect.height / 2 - window.innerHeight / 2 });
+      setSubmitting(true);
+      // keep submit transition duration just long enough for animations to finish
+      window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, effectiveReducedMotion ? 0 : 2200);
       return;
     }
-
-    setTypingTick((value) => value + 1);
-  }, [hasStarted, currentQuestionIndex]);
-
-  const currentQuestion = hasStarted ? getQuestionByIndex(currentQuestionIndex) : null;
-  const currentValue = currentQuestion ? answers[currentQuestion.id] ?? "" : "";
-  const questionNumber = currentQuestionIndex + 1;
-  const progressPercent = useMemo(
-    () => (hasStarted ? Math.max(0, (questionNumber / totalQuestions) * 100) : 0),
-    [hasStarted, questionNumber],
-  );
-  const isFinalStep = Boolean(currentQuestion) && currentQuestionIndex === totalQuestions - 1;
-  const activeQuestion = currentQuestion;
-
-  function resetToStart() {
-    setHasStarted(true);
-    setAnswers({});
-    setCurrentQuestionIndex(startQuestionIndex);
-    setHistory([]);
-    setDirection(1);
-    setError(null);
+    setHistory((current) => [...current, index]);
+    setDirection(1); setIndex(nextIndex);
   }
 
-  function goNext(nextValue?: string) {
-    if (!currentQuestion) {
-      return;
-    }
-
-    const value = nextValue ?? currentValue;
-    const validationError = validateQuestion(currentQuestion, value);
-
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setError(null);
-    setAnswers((previous) => ({ ...previous, [currentQuestion.id]: value }));
-
-    const nextQuestionIndex = resolveNextQuestionIndex(currentQuestionIndex, value, answers);
-    if (nextQuestionIndex === null) {
-      return;
-    }
-
-    setHistory((previous) => [...previous, currentQuestionIndex]);
-    setDirection(1);
-    setCurrentQuestionIndex(nextQuestionIndex);
-  }
-
-  function goBack() {
-    setHistory((previous) => {
-      if (previous.length === 0) {
-        return previous;
-      }
-
-      const nextHistory = [...previous];
-      const previousIndex = nextHistory.pop();
-
-      if (typeof previousIndex !== "number") {
-        return previous;
-      }
-
-      setError(null);
-      setDirection(-1);
-      setCurrentQuestionIndex(previousIndex);
-      return nextHistory;
+  function back() {
+    setHistory((current) => {
+      const previous = current.at(-1);
+      if (previous === undefined) return current;
+      setDirection(-1); setIndex(previous); setError(null);
+      return current.slice(0, -1);
     });
   }
 
-  function handleChoice(choiceValue: string) {
-    if (!currentQuestion) {
-      return;
-    }
-
-    setAnswers((previous) => ({ ...previous, [currentQuestion.id]: choiceValue }));
+  function choose(choice: string) {
+    setAnswers((current) => question ? { ...current, [question.id]: choice } : current);
     setError(null);
-    window.setTimeout(() => goNext(choiceValue), 140);
+    window.setTimeout(() => next(choice), effectiveReducedMotion ? 0 : 170);
   }
 
   useEffect(() => {
-    function handleChoiceShortcut(event: globalThis.KeyboardEvent) {
-      if (!hasStarted || !currentQuestion || currentQuestion.type !== "multipleChoice" || !currentQuestion.options) {
-        return;
-      }
+    const onKey = (event: globalThis.KeyboardEvent) => {
+      if (!question || question.type !== "multipleChoice") return;
+      const choiceIndex = /^[1-9]$/.test(event.key) ? Number(event.key) - 1 : -1;
+      const choice = question.options?.[choiceIndex];
+      if (choice) { event.preventDefault(); choose(choice.value); }
+      if (event.key === "Escape") back();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [question, index, effectiveReducedMotion]);
 
-      const key = event.key.toLowerCase();
-      const index = key >= "1" && key <= "9" ? Number(key) - 1 : key >= "a" && key <= "z" ? key.charCodeAt(0) - 97 : -1;
-      const option = currentQuestion.options[index];
-
-      if (option) {
-        event.preventDefault();
-        handleChoice(option.value);
-      }
-    }
-
-    window.addEventListener("keydown", handleChoiceShortcut);
-    return () => window.removeEventListener("keydown", handleChoiceShortcut);
-  }, [hasStarted, currentQuestion, currentQuestionIndex]);
-
-  function handleKeyboard(event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      goNext();
-    }
-
-    if (event.key === "Escape") {
-      goBack();
-    }
+  function onInputKeyDown(event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) {
+    if (event.key === "Enter" && !event.shiftKey) { event.preventDefault(); next(); }
+    if (event.key === "Escape") back();
   }
 
-  const slideVariants = {
-    initial: (slideDirection: number) => ({
-      opacity: 0,
-      y: slideDirection > 0 ? 42 : -42,
-      scale: 0.98,
-    }),
-    animate: {
-      opacity: 1,
-      y: 0,
-      scale: 1,
-      transition: { duration: 0.42, ease: [0.16, 1, 0.3, 1] },
-    },
-    exit: (slideDirection: number) => ({
-      opacity: 0,
-      y: slideDirection > 0 ? -30 : 30,
-      scale: 0.985,
-      transition: { duration: 0.26, ease: [0.4, 0, 0.2, 1] },
-    }),
-  };
-
-  const promptVariants = {
-    initial: { opacity: 0, y: 12, filter: "blur(8px)" },
-    animate: {
-      opacity: 1,
-      y: 0,
-      filter: "blur(0px)",
-      transition: { duration: 0.34, ease: [0.16, 1, 0.3, 1] },
-    },
-  };
-
-  const optionVariants = {
-    initial: { opacity: 0, y: 14 },
-    animate: (index: number) => ({
-      opacity: 1,
-      y: 0,
-      transition: { delay: 0.08 + index * 0.07, duration: 0.28, ease: [0.16, 1, 0.3, 1] },
-    }),
-    tap: { scale: 0.985 },
+  const pageMotion = effectiveReducedMotion ? { duration: 0 } : { duration: 0.48, ease: [0.16, 1, 0.3, 1] as const };
+  const slide = {
+    initial: (d: number) => ({ opacity: 0, y: d > 0 ? 38 : -38, filter: "blur(8px)" }),
+    animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: pageMotion },
+    exit: (d: number) => ({ opacity: 0, y: d > 0 ? -28 : 28, filter: "blur(4px)", transition: { duration: effectiveReducedMotion ? 0 : 0.24 } }),
   };
 
   return (
-    <main className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-6 sm:px-6 lg:px-10">
-      <div className="pointer-events-none absolute inset-0 opacity-35 [background-image:linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] [background-size:88px_88px]" />
-      <div className="bg-drift pointer-events-none absolute left-[10%] top-[12%] h-[18rem] w-[18rem] rounded-full bg-[radial-gradient(circle,rgba(110,168,255,0.28),transparent_68%)] blur-3xl" />
-      <div className="bg-drift pointer-events-none absolute right-[10%] top-[18%] h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,rgba(154,215,255,0.18),transparent_70%)] [animation-delay:-6s] blur-3xl" />
-
-      <section className="relative flex min-h-[calc(100vh-1.5rem)] w-full max-w-4xl overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(255,255,255,0.04)] shadow-[0_24px_90px_rgba(0,0,0,0.42)] backdrop-blur-2xl">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.05),transparent_30%,rgba(255,255,255,0.02)_70%,transparent)]" />
-        <div className="pointer-events-none absolute inset-0 rounded-[2rem] border border-white/5" />
-
-        <div className="relative flex min-w-0 flex-1 flex-col">
-          <div className="flex items-center justify-between px-5 pt-5 sm:px-8 sm:pt-6">
-            <button
-              type="button"
-              onClick={goBack}
-              disabled={!hasStarted || history.length === 0}
-              className="rounded-full border border-white/10 bg-[rgba(255,255,255,0.04)] px-4 py-2 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--foreground)] transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35"
-            >
-              Back
+    <main className="form-shell">
+      <div className="form-orb form-orb-one" /><div className="form-orb form-orb-two" />
+      <section className="form-stage" aria-label="Interactive order form">
+          <header className="form-header">
+          <button type="button" className="quiet-button" onClick={back} disabled={!started || history.length === 0} aria-label="Go to previous question">← <span>Back</span></button>
+          <div className="wordmark">INFORMATION <span>FORM</span></div>
+          <div style={{display:'flex',gap:12,alignItems:'center'}}>
+            <button type="button" className="motion-toggle" onClick={() => setForceMotion((v) => !v)} aria-pressed={forceMotion} aria-label={forceMotion ? "Disable forced motion" : "Enable forced motion"}>
+              <span className="motion-toggle-knob">{forceMotion ? "⚡" : "—"}</span><span style={{marginLeft:6}}>{forceMotion ? "Effects Enabled" : "Effects Disabled"}</span>
             </button>
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.28em] text-white/45">
-              <span>{hasStarted ? `Q${questionNumber}` : "Start"}</span>
-              <span className="h-px w-10 bg-white/15" />
-              <span>{hasStarted ? `0${totalQuestions}`.slice(-2) : "Intro"}</span>
-            </div>
+            <button type="button" className="theme-toggle" onClick={() => setTheme((current) => current === "dark" ? "light" : "dark")} aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} mode`}>
+              <span className="theme-toggle-knob">{theme === "dark" ? "◐" : "◑"}</span><span>{theme === "dark" ? "Light" : "Dark"}</span>
+            </button>
           </div>
+        </header>
 
-          <div className="px-5 pt-4 sm:px-8">
-            <div className="h-px w-full overflow-hidden bg-white/8">
-              <div
-                className="h-full bg-[linear-gradient(90deg,#6ea8ff,#9ad7ff)] transition-[width] duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
-                style={{ width: hasStarted ? `${progressPercent}%` : "0%" }}
-              />
-            </div>
-          </div>
+        <div className="progress-wrap" aria-hidden="true"><motion.div className="progress-line" animate={{ width: `${submitted ? 100 : progress}%` }} transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }} /></div>
 
-          <div className="relative flex flex-1 items-center justify-center px-5 py-8 sm:px-8 sm:py-10 lg:px-12">
-            <AnimatePresence mode="wait" initial={false} custom={direction}>
-              {!hasStarted ? (
-                <motion.div
-                  key="start-screen"
-                  initial={{ opacity: 0, y: 18 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -18 }}
-                  transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-                  className="shine-sweep relative w-full max-w-3xl overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(255,255,255,0.05)] px-6 py-10 shadow-[0_20px_80px_rgba(0,0,0,0.25)] sm:px-10 sm:py-14"
-                >
-                  <div className="space-y-4 text-center">
-                    <div className="text-[11px] uppercase tracking-[0.4em] text-white/45">Checkout registration</div>
-                    <h1 className="mx-auto max-w-2xl font-['Cormorant_Garamond',serif] text-5xl leading-[0.92] tracking-[-0.035em] text-[var(--foreground)] sm:text-6xl lg:text-7xl">
-                      Welcome to the form.
-                    </h1>
-                    <p className="mx-auto max-w-2xl text-sm leading-6 text-white/60 sm:text-base">
-                      Reserve your spot, complete the dummy checkout, and keep the flow moving one screen at a time.
-                    </p>
-                  </div>
-
-                  <div className="mt-10 flex flex-col items-center gap-3">
-                    <button
-                      type="button"
-                      onClick={resetToStart}
-                      className="rounded-[0.9rem] bg-[#2b232d] px-7 py-3 text-sm font-semibold text-white transition hover:bg-[#342a36]"
-                    >
-                      Fill form
-                    </button>
-                    <div className="flex items-center gap-2 text-sm text-white/60">
-                      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-white/35 text-[10px]">⏱</span>
-                      <span>Takes a few minutes</span>
-                    </div>
-                  </div>
-                </motion.div>
-              ) : activeQuestion ? (
-                  <motion.div
-                    key={activeQuestion.id}
-                    custom={direction}
-                    variants={slideVariants}
-                    initial="initial"
-                    animate="animate"
-                    exit="exit"
-                    className="shine-sweep relative w-full max-w-3xl overflow-hidden rounded-[2rem] border border-white/10 bg-[rgba(255,255,255,0.04)] px-6 py-8 shadow-[0_20px_80px_rgba(0,0,0,0.25)] sm:px-10 sm:py-10"
-                  >
-                  <div className="mb-6 flex items-center gap-2 text-[11px] uppercase tracking-[0.35em] text-white/45">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-white/80">Q{questionNumber}</span>
-                    <span>{activeQuestion.eyebrow}</span>
-                  </div>
-
-                  <motion.div
-                    key={`${activeQuestion.id}-prompt-${typingTick}`}
-                    variants={promptVariants}
-                    initial="initial"
-                    animate="animate"
-                    className="space-y-2"
-                  >
-                    <h1 className="max-w-2xl font-['Cormorant_Garamond',serif] text-5xl leading-[0.92] tracking-[-0.035em] text-[var(--foreground)] sm:text-6xl lg:text-7xl">
-                      {activeQuestion.prompt}
-                    </h1>
-                    <p className="max-w-2xl text-sm leading-6 text-white/60 sm:text-base">{activeQuestion.helper}</p>
-                  </motion.div>
-
-                  <div className="mt-10 space-y-4 sm:mt-12">
-                    {activeQuestion.type === "multipleChoice" ? (
-                      <div className="grid gap-3">
-                        {activeQuestion.options?.map((option, index) => {
-                          const selected = answers[activeQuestion.id] === option.value;
-
-                          return (
-                            <motion.button
-                              key={option.value}
-                              type="button"
-                              custom={index}
-                              variants={optionVariants}
-                              initial="initial"
-                              animate="animate"
-                              whileHover={{ y: -2, scale: 1.01 }}
-                              whileTap="tap"
-                              onClick={() => handleChoice(option.value)}
-                              className={`group rounded-[1.35rem] border px-5 py-4 text-left transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgba(154,215,255,0.55)] sm:px-6 sm:py-5 ${selected ? "border-[rgba(154,215,255,0.7)] bg-[rgba(110,168,255,0.13)]" : "border-white/10 bg-[rgba(255,255,255,0.045)] hover:border-white/20 hover:bg-[rgba(255,255,255,0.075)]"}`}
-                            >
-                              <div className="flex items-start justify-between gap-4">
-                                <div>
-                                  <div className="text-lg font-medium tracking-[-0.02em] text-[var(--foreground)] sm:text-xl">{option.label}</div>
-                                  <div className="mt-1 max-w-xl text-sm leading-6 text-white/60">{option.description}</div>
-                                </div>
-                                <div className={`mt-1 flex h-8 w-8 items-center justify-center rounded-full border transition ${selected ? "border-[rgba(154,215,255,0.75)] bg-[rgba(110,168,255,0.22)] shadow-[0_0_0_6px_rgba(110,168,255,0.08)]" : "border-white/12 bg-[rgba(255,255,255,0.045)] group-hover:border-white/20"}`}>
-                                  <span className={`h-2.5 w-2.5 rounded-full transition ${selected ? "bg-[#9ad7ff]" : "bg-white/20"}`} />
-                                </div>
-                              </div>
-                            </motion.button>
-                          );
-                        })}
-                      </div>
-                    ) : activeQuestion.multiline ? (
-                      <div className="space-y-4">
-                        <textarea
-                          ref={inputRef as React.RefObject<HTMLTextAreaElement>}
-                          value={currentValue}
-                          onChange={(event) => {
-                            setAnswers((previous) => ({ ...previous, [activeQuestion.id]: event.target.value }));
-                            setError(null);
-                          }}
-                          onKeyDown={handleKeyboard}
-                          placeholder={activeQuestion.placeholder}
-                          className="min-h-40 w-full resize-none rounded-[1.5rem] border border-white/12 bg-[rgba(255,255,255,0.045)] px-5 py-4 text-base leading-7 text-[var(--foreground)] outline-none transition placeholder:text-white/28 focus:border-[rgba(154,215,255,0.72)] focus:shadow-[0_0_0_1px_rgba(154,215,255,0.16),0_0_0_12px_rgba(110,168,255,0.1)]"
-                        />
-                        <div className="flex items-center justify-between text-xs uppercase tracking-[0.24em] text-white/42">
-                          <span className="flex items-center gap-2">
-                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#9ad7ff]" />
-                            Typing preview active
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => goNext()}
-                            className="rounded-full border border-white/10 bg-[rgba(255,255,255,0.06)] px-4 py-2 text-[11px] uppercase tracking-[0.24em] text-[var(--foreground)] transition hover:bg-white/10"
-                          >
-                            Finish
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <input
-                          ref={inputRef as React.RefObject<HTMLInputElement>}
-                          value={currentValue}
-                          onChange={(event) => {
-                            setAnswers((previous) => ({ ...previous, [activeQuestion.id]: event.target.value }));
-                            setError(null);
-                          }}
-                          onKeyDown={handleKeyboard}
-                          placeholder={activeQuestion.placeholder}
-                          inputMode={activeQuestion.inputMode}
-                          className="w-full rounded-full border border-white/12 bg-[rgba(255,255,255,0.045)] px-5 py-4 text-base text-[var(--foreground)] outline-none transition placeholder:text-white/28 focus:border-[rgba(154,215,255,0.72)] focus:shadow-[0_0_0_1px_rgba(154,215,255,0.16),0_0_0_12px_rgba(110,168,255,0.1)]"
-                        />
-                        <div className="flex items-center justify-between text-xs uppercase tracking-[0.24em] text-white/42">
-                          <span className="flex items-center gap-2">
-                            <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#9ad7ff]" />
-                            {error ? <span className="text-[var(--danger)]">{error}</span> : "Answers are auto-saved locally"}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => goNext()}
-                            className="rounded-full border border-white/10 bg-[rgba(255,255,255,0.06)] px-5 py-2 text-[11px] uppercase tracking-[0.24em] text-[var(--foreground)] transition hover:bg-white/10"
-                          >
-                            Next
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="mt-8 min-h-6 text-sm text-[var(--danger)]">{error}</div>
-
-                  {isFinalStep && currentValue.trim() ? (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: 0.15 }}
-                      className="mt-8 rounded-[1.5rem] border border-[rgba(154,215,255,0.22)] bg-[rgba(110,168,255,0.08)] p-5 text-sm leading-6 text-[var(--foreground)]"
-                    >
-                      <div className="text-xs uppercase tracking-[0.3em] text-white/50">Preview</div>
-                      <p className="mt-2 max-w-2xl">
-                        The checkout-style flow is ready for Vercel. The state machine, branching logic, keyboard shortcuts, and dark-mode glass shell are all in place.
-                      </p>
-                    </motion.div>
-                  ) : null}
-                </motion.div>
-              ) : null}
-            </AnimatePresence>
-          </div>
+        <div className="form-content">
+          <AnimatePresence mode="wait" custom={direction}>
+            {!started ? <Intro key="intro" onBegin={begin} reducedMotion={effectiveReducedMotion} /> : null}
+            {question ? <Question key={question.id} question={question} questionNumber={currentStep} value={value} answers={answers} error={error} inputRef={inputRef} direction={direction} slide={slide} onChange={(newValue) => { setAnswers((current) => ({ ...current, [question.id]: newValue })); setError(null); }} onChoose={choose} onNext={() => next()} onKeyDown={onInputKeyDown} /> : null}
+            {submitted ? <Completion key="completion" onRestart={returnToWelcome} reducedMotion={effectiveReducedMotion} /> : null}
+          </AnimatePresence>
+          <AnimatePresence>{submitting ? <SubmitTransition key="submit-transition" origin={submitOrigin} reducedMotion={effectiveReducedMotion} /> : null}</AnimatePresence>
         </div>
+
+        <footer className="form-footer">
+          <span>Made by <a href="https://www.rishabhj.in" target="_blank" rel="noreferrer">Rishabh</a></span>
+          <span className="desktop-hint">{question?.type === "multipleChoice" ? "Press 1–3 to choose" : "Enter to continue"}</span>
+        </footer>
       </section>
     </main>
   );
+}
+
+function Intro({ onBegin, reducedMotion }: { onBegin: () => void; reducedMotion: boolean | null }) {
+  return <motion.div className="intro" initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -18 }} transition={{ duration: reducedMotion ? 0 : 0.5 }}>
+    <div className="intro-sculpture" aria-hidden="true"><span /><span /><i /></div>
+    <p className="eyebrow">Welcome</p><h1>Business <em>Conclave </em>2026</h1>
+    <p className="intro-copy">This is a dummy form. Answer a few questions to explore the experience.</p>
+    <motion.button type="button" className="start-button" onClick={onBegin} whileHover={reducedMotion ? undefined : { y: -4, scale: 1.035, rotateX: -7, rotateY: 5 }} whileTap={{ y: 1, scale: .97, rotateX: 6 }}><span className="start-button-orbit" aria-hidden="true" /><span className="start-button-label">Start form <b>↗</b></span></motion.button>
+    <p className="key-hint"><kbd>Enter</kbd> to start</p>
+  </motion.div>;
+}
+
+type QuestionProps = { question: NonNullable<ReturnType<typeof getQuestionByIndex>>; questionNumber: number; value: string; answers: AnswerMap; error: string | null; inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>; direction: 1 | -1; slide: Variants; onChange: (value: string) => void; onChoose: (value: string) => void; onNext: () => void; onKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void };
+function Question({ question, questionNumber, value, answers, error, inputRef, direction, slide, onChange, onChoose, onNext, onKeyDown }: QuestionProps) {
+  return <motion.article className="question" custom={direction} variants={slide} initial="initial" animate="animate" exit="exit">
+    <p className="eyebrow">Question {String(questionNumber).padStart(2, "0")}</p><h1>{question.prompt}</h1><p className="helper">{question.helper}</p>
+    <div className="answer-area">
+      {question.type === "multipleChoice" ? <div className="choices">{question.options?.map((option, optionIndex) => <motion.button key={option.value} type="button" className={`choice ${answers[question.id] === option.value ? "selected" : ""}`} onClick={() => onChoose(option.value)} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + optionIndex * 0.07 }} whileHover={{ x: 4 }} whileTap={{ scale: 0.99 }}><span className="choice-key">{optionIndex + 1}</span><span><strong>{option.label}</strong><small>{option.description}</small></span><span className="choice-mark">✓</span></motion.button>)}</div> : question.multiline ? <textarea ref={inputRef as React.RefObject<HTMLTextAreaElement>} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder={question.placeholder} aria-label={question.prompt} /> : <input ref={inputRef as React.RefObject<HTMLInputElement>} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder={question.placeholder} inputMode={question.inputMode} aria-label={question.prompt} />}
+      {question.type !== "multipleChoice" ? <div className="next-row"><span className={`validation ${error ? "is-error" : ""}`}>{error ?? "Your response is saved automatically"}</span><button type="button" className="next-button" onClick={onNext} data-submit-button={question.id === "story" || undefined}>{question.id === "story" ? "Submit" : "Continue"} <span>↵</span></button></div> : null}
+    </div>
+  </motion.article>;
+}
+
+function SubmitTransition({ origin, reducedMotion }: { origin: { x: number; y: number }; reducedMotion: boolean | null }) {
+  const dots = Array.from({ length: 10 }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / 10;
+    return { x: Math.cos(angle) * (52 + (index % 3) * 14), y: Math.sin(angle) * (52 + (index % 3) * 14), delay: index * 0.03 };
+  });
+  return <motion.div className="submit-transition" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <div className="conversion-grid" aria-hidden="true">{Array.from({ length: 12 }, (_, index) => <motion.i key={index} initial={{ scaleY: 0 }} animate={{ scaleY: 1 }} transition={{ delay: 0.32 + index * 0.03, duration: reducedMotion ? 0 : 0.34, ease: [0.22, 1, 0.36, 1] }} />)}</div>
+    <motion.div className="submit-pod" initial={{ x: origin.x, y: origin.y, scale: 1, opacity: 1 }} animate={{ x: 0, y: 0, scale: .18, opacity: 0 }} transition={{ duration: reducedMotion ? 0 : .6, ease: [0.16, 1, 0.3, 1] }}>Submit <b>↵</b></motion.div>
+    <motion.div className="dot-field" animate={reducedMotion ? {} : { rotate: 360 }} transition={{ delay: 0.5, duration: 2.4, ease: "linear" }}>
+      {dots.map((dot, index) => <motion.span key={index} className="travel-dot" initial={{ x: origin.x, y: origin.y, scale: 0, opacity: 0 }} animate={{ x: [origin.x, 0, dot.x], y: [origin.y, 0, dot.y], scale: [0, 1.25, .62], opacity: [0, 1, 1] }} transition={{ duration: reducedMotion ? 0 : 0.9, delay: dot.delay, ease: [0.16, 1, 0.3, 1], times: [0, .52, 1] }} />)}</motion.div>
+    <motion.div className="loading-core" initial={{ scale: 0, opacity: 0 }} animate={{ scale: [0, 1.25, 1], opacity: 1 }} transition={{ delay: reducedMotion ? 0 : .34, duration: reducedMotion ? 0 : .46, ease: [0.34, 1.56, 0.64, 1] }}><span /></motion.div>
+    <motion.p className="transmitting" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: reducedMotion ? 0 : 0.8 }}>Sending your answers</motion.p>
+  </motion.div>;
+}
+
+function Completion({ onRestart, reducedMotion }: { onRestart: () => void; reducedMotion: boolean | null }) {
+  return <motion.article className="completion" initial={{ opacity: 0, scale: 0.82, rotateX: -20 }} animate={{ opacity: 1, scale: 1, rotateX: 0 }} transition={{ type: "spring", stiffness: 120, damping: 15 }}>
+    <div className="completion-scene" aria-hidden="true"><motion.div className="orbital orbital-one" animate={reducedMotion ? {} : { rotate: 360 }} transition={{ repeat: Infinity, duration: 10, ease: "linear" }} /><motion.div className="orbital orbital-two" animate={reducedMotion ? {} : { rotate: -360 }} transition={{ repeat: Infinity, duration: 7, ease: "linear" }} /><motion.div className="core" initial={{ scale: 0 }} animate={{ scale: [0, 1.35, 1] }} transition={{ duration: reducedMotion ? 0 : 0.8, delay: 0.14 }}><span>✓</span></motion.div></div>
+    <p className="eyebrow">Transmission complete</p><h1>We got it.</h1><p>Your answers have landed. Your completed form has been sent to our team for internal review and you will be contacted once the details are verified.</p>
+    <button type="button" className="primary-button" onClick={onRestart}>Start again <span>↗</span></button>
+  </motion.article>;
 }

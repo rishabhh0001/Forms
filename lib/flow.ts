@@ -17,7 +17,6 @@ export type Question = {
   prompt: string;
   options?: ChoiceOption[];
   helper: string;
-  eyebrow: string;
   required?: boolean;
   placeholder?: string;
   nextStep?: NextStepRule;
@@ -28,7 +27,6 @@ export type Question = {
 export const questionSchema: Question[] = [
   {
     id: "goal",
-    eyebrow: "01 / 05",
     prompt: "What are you testing in this dummy checkout flow?",
     helper: "Pick the path that best matches the sample scenario you want to preview.",
     type: "multipleChoice",
@@ -59,7 +57,6 @@ export const questionSchema: Question[] = [
   },
   {
     id: "capacity",
-    eyebrow: "02 / 05",
     prompt: "How fast should the dummy delivery arrive?",
     helper: "This placeholder shipping step helps test branching, progress, and motion.",
     type: "multipleChoice",
@@ -73,7 +70,6 @@ export const questionSchema: Question[] = [
   },
   {
     id: "timeline",
-    eyebrow: "02 / 05",
     prompt: "Any delivery instructions for the test order?",
     helper: "This extra checkout step makes the physical-product path feel more realistic.",
     type: "multipleChoice",
@@ -87,7 +83,6 @@ export const questionSchema: Question[] = [
   },
   {
     id: "cadence",
-    eyebrow: "02 / 05",
     prompt: "How often should this dummy checkout repeat?",
     helper: "A recurring test path is useful for subscriptions and repeat customers.",
     type: "multipleChoice",
@@ -101,7 +96,6 @@ export const questionSchema: Question[] = [
   },
   {
     id: "name",
-    eyebrow: "03 / 05",
     prompt: "What name should appear on the dummy order?",
     helper: "This stands in for the customer or billing name field.",
     type: "text",
@@ -111,7 +105,6 @@ export const questionSchema: Question[] = [
   },
   {
     id: "email",
-    eyebrow: "04 / 05",
     prompt: "Where should the confirmation email be sent?",
     helper: "This is the final required checkout contact field for testing.",
     type: "email",
@@ -122,18 +115,16 @@ export const questionSchema: Question[] = [
   },
   {
     id: "story",
-    eyebrow: "05 / 05",
     prompt: "Anything else we should test before completing the dummy order?",
     helper: "Shift+Enter makes a line break. Enter continues. This note is just for testing.",
     type: "textarea",
-    required: true,
+    required: false,
     placeholder: "Add notes about the test scenario, edge cases, or checkout variations.",
     multiline: true,
     nextStep: null,
   },
 ];
 
-export const totalQuestions = questionSchema.length;
 export const startQuestionIndex = 0;
 
 export const questionIdToIndex = Object.fromEntries(

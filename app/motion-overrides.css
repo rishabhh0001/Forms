@@ -1,0 +1,11 @@
+/* motion toggle styling */
+.motion-toggle { display:inline-flex; align-items:center; gap:8px; border:1px solid var(--line); padding:7px 10px; background:transparent; cursor:pointer; min-width:92px; justify-content:center; }
+.motion-toggle .motion-toggle-knob { font-size:13px; line-height:1; }
+
+/* If the OS prefers reduced motion but user forced motion, allow animations */
+@media (prefers-reduced-motion: reduce) {
+  .force-motion *, .force-motion *::before, .force-motion *::after { animation-duration: initial !important; animation-iteration-count: initial !important; animation-play-state: running !important; }
+}
+
+/* widen the content container to better use the stage */
+.intro,.question,.completion { width: min(100%, 880px) !important; }

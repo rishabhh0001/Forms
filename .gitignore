@@ -9,8 +9,9 @@ dist/
 coverage/
 *.tsbuildinfo
 
-# Environment files
-.env*
+# Environment files (secrets stay local — only the example is tracked)
+.env
+.env.*
 !.env.example
 
 # Logs and local tooling

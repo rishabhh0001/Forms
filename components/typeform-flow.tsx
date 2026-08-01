@@ -76,6 +76,26 @@ export function TypeformFlow() {
   const currentStep = history.length + 1;
   const progress = useMemo(() => (started ? (currentStep / journeyLength) * 100 : 0), [started, currentStep, journeyLength]);
 
+  async function submitToGoogleSheets(finalAnswers: AnswerMap) {
+    try {
+      const response = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ answers: finalAnswers }),
+      });
+      const data = (await response.json().catch(() => null)) as
+        | { ok: boolean; status?: string; error?: string }
+        | null;
+      if (data?.ok) {
+        console.log(`[sheets] Response saved (${data.status ?? "created"}).`);
+      } else {
+        console.warn("[sheets] Submission not saved:", data?.error ?? `HTTP ${response.status}`);
+      }
+    } catch (error) {
+      console.error("[sheets] Could not send answers to Google Sheets:", error);
+    }
+  }
+
   function begin() {
     setAnswers({});
     window.localStorage.removeItem(STORAGE_KEY);
@@ -110,6 +130,8 @@ export function TypeformFlow() {
       const rect = submitButton?.getBoundingClientRect();
       if (rect) setSubmitOrigin({ x: rect.left + rect.width / 2 - window.innerWidth / 2, y: rect.top + rect.height / 2 - window.innerHeight / 2 });
       setSubmitting(true);
+      // Send the answers to Google Sheets (fire-and-forget; never blocks the UX).
+      void submitToGoogleSheets({ ...answers, [question.id]: nextValue });
       // keep submit transition duration just long enough for animations to finish
       window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, effectiveReducedMotion ? 0 : 2200);
       return;

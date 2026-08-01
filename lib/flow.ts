@@ -172,10 +172,10 @@ export function validateQuestion(question: Question, value: string) {
   }
 
   if (question.type === "email") {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const emailPattern = /^[^\s@]+@[^\s@]+\.snu\.edu\.in$/;
 
     if (!emailPattern.test(trimmedValue)) {
-      return "Enter a valid email address.";
+      return "Enter a valid email address ending with '@snu.edu.in'.";
     }
   }
 

@@ -72,7 +72,7 @@ export function TypeformFlow() {
 
   const question = started && !submitted ? getQuestionByIndex(index) : null;
   const value = question ? answers[question.id] ?? "" : "";
-  const journeyLength = answers.goal === "physical_product" ? 6 : 4;
+  const journeyLength = answers.goal === "physical_product" ? 6 : answers.goal === "subscription" ? 5 : 4;
   const currentStep = history.length + 1;
   const progress = useMemo(() => (started ? (currentStep / journeyLength) * 100 : 0), [started, currentStep, journeyLength]);
 

@@ -521,7 +521,7 @@ Flow inside `doPost(e)`:
 
 The requirement is that **the same email cannot submit twice**. `findEmailRow_(sheet, email)`:
 
-- Reads every value in the email column (column `6` = `F`), from row 2 to the last row.
+- Reads every value in the email column (column `7` = `G`), from row 2 to the last row.
 - Normalizes both sides with `String(...).trim().toLowerCase()`.
 - Returns the matching row number, or `-1`.
 

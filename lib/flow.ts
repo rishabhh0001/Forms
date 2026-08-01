@@ -160,6 +160,13 @@ export function resolveNextQuestionIndex(
   return null;
 }
 
+/** Matches local-part@snu.edu.in (case-insensitive, literal dots escaped). */
+export const SNU_EMAIL_PATTERN = /^[^\s@]+@snu\.edu\.in$/i;
+
+export function isValidSnuEmail(value: string) {
+  return SNU_EMAIL_PATTERN.test(value.trim());
+}
+
 export function validateQuestion(question: Question, value: string) {
   if (!question.required) {
     return null;
@@ -171,12 +178,8 @@ export function validateQuestion(question: Question, value: string) {
     return "This question needs an answer before you can continue.";
   }
 
-  if (question.type === "email") {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.snu\.edu\.in$/;
-
-    if (!emailPattern.test(trimmedValue)) {
-      return "Enter a valid email address ending with '@snu.edu.in'.";
-    }
+  if (question.type === "email" && !isValidSnuEmail(trimmedValue)) {
+    return "Enter a valid email address ending with '@snu.edu.in'.";
   }
 
   return null;

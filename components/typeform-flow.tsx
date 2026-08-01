@@ -5,6 +5,7 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 import {
   type AnswerMap,
   getQuestionByIndex,
+  isValidSnuEmail,
   questionSchema,
   resolveNextQuestionIndex,
   startQuestionIndex,
@@ -14,6 +15,7 @@ import {
 const STORAGE_KEY = "typeform-flow-demo";
 const THEME_KEY = "typeform-flow-theme";
 type Theme = "dark" | "light";
+type EmailStatus = "idle" | "checking" | "available" | "taken";
 
 export function TypeformFlow() {
   const [started, setStarted] = useState(false);
@@ -29,6 +31,10 @@ export function TypeformFlow() {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const reducedMotion = useReducedMotion();
   const [forceMotion, setForceMotion] = useState(true);
+  const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
+  const emailCheckInFlightRef = useRef<{ email: string; promise: Promise<EmailStatus> } | null>(null);
+  const emailCheckSeqRef = useRef(0);
+  const advancingRef = useRef(false);
   const effectiveReducedMotion = reducedMotion && !forceMotion;
 
   useEffect(() => {
@@ -72,6 +78,32 @@ export function TypeformFlow() {
 
   const question = started && !submitted ? getQuestionByIndex(index) : null;
   const value = question ? answers[question.id] ?? "" : "";
+
+  // Real-time email availability check (debounced 450ms) while on the email question.
+  useEffect(() => {
+    if (!question || question.id !== "email" || !started || submitted) return;
+
+    const email = value.trim().toLowerCase();
+
+    if (!isValidSnuEmail(email)) {
+      emailCheckSeqRef.current += 1;
+      setEmailStatus("idle");
+      return;
+    }
+
+    const seq = emailCheckSeqRef.current + 1;
+    emailCheckSeqRef.current = seq;
+    setEmailStatus("checking");
+
+    const timer = window.setTimeout(() => {
+      void getEmailCheckPromise(email);
+    }, 450);
+
+    return () => {
+      window.clearTimeout(timer);
+      emailCheckSeqRef.current += 1;
+    };
+  }, [question?.id, value, started, submitted]);
   const journeyLength = answers.goal === "physical_product" ? 6 : answers.goal === "subscription" ? 5 : 4;
   const currentStep = history.length + 1;
   const progress = useMemo(() => (started ? (currentStep / journeyLength) * 100 : 0), [started, currentStep, journeyLength]);
@@ -96,16 +128,64 @@ export function TypeformFlow() {
     }
   }
 
+  function getEmailCheckPromise(email: string): Promise<EmailStatus> | null {
+    if (!isValidSnuEmail(email)) return null;
+
+    const existing = emailCheckInFlightRef.current;
+    if (existing && existing.email === email) return existing.promise;
+
+    const seq = emailCheckSeqRef.current;
+    let resolveEntry: ((status: EmailStatus) => void) | undefined;
+    const promise = new Promise<EmailStatus>((resolve) => {
+      resolveEntry = resolve;
+    });
+    const entry = { email, promise };
+    emailCheckInFlightRef.current = entry;
+
+    void fetch("/api/check-email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    })
+      .then((response) => response.json().catch(() => null))
+      .then((data: { ok?: boolean; exists?: boolean } | null) => {
+        const status: EmailStatus =
+          data?.ok && typeof data.exists === "boolean"
+            ? data.exists
+              ? "taken"
+              : "available"
+            : "idle";
+        if (emailCheckInFlightRef.current === entry) {
+          emailCheckInFlightRef.current = null;
+        }
+        if (seq === emailCheckSeqRef.current) {
+          setEmailStatus(status);
+        }
+        resolveEntry?.(status);
+      })
+      .catch(() => {
+        if (emailCheckInFlightRef.current === entry) {
+          emailCheckInFlightRef.current = null;
+        }
+        if (seq === emailCheckSeqRef.current) {
+          setEmailStatus("idle");
+        }
+        resolveEntry?.("idle");
+      });
+
+    return promise;
+  }
+
   function begin() {
     setAnswers({});
     window.localStorage.removeItem(STORAGE_KEY);
-    setStarted(true); setSubmitted(false); setSubmitting(false); setIndex(startQuestionIndex); setHistory([]); setError(null); setDirection(1);
+    setStarted(true); setSubmitted(false); setSubmitting(false); setIndex(startQuestionIndex); setHistory([]); setError(null); setDirection(1); setEmailStatus("idle"); emailCheckSeqRef.current += 1;
   }
 
   function returnToWelcome() {
     setAnswers({});
     window.localStorage.removeItem(STORAGE_KEY);
-    setStarted(false); setSubmitted(false); setSubmitting(false); setIndex(startQuestionIndex); setHistory([]); setError(null); setDirection(-1);
+    setStarted(false); setSubmitted(false); setSubmitting(false); setIndex(startQuestionIndex); setHistory([]); setError(null); setDirection(-1); setEmailStatus("idle"); emailCheckSeqRef.current += 1;
   }
 
   useEffect(() => {
@@ -117,27 +197,46 @@ export function TypeformFlow() {
     return () => window.removeEventListener("keydown", onKey);
   }, [started]);
 
-  function next(answer?: string) {
-    if (!question) return;
-    const nextValue = answer ?? value;
-    const validation = validateQuestion(question, nextValue);
-    if (validation) { setError(validation); return; }
-    setAnswers((current) => ({ ...current, [question.id]: nextValue }));
-    setError(null);
-    const nextIndex = resolveNextQuestionIndex(index, nextValue, answers);
-    if (nextIndex === null) {
-      const submitButton = document.querySelector<HTMLElement>("[data-submit-button]");
-      const rect = submitButton?.getBoundingClientRect();
-      if (rect) setSubmitOrigin({ x: rect.left + rect.width / 2 - window.innerWidth / 2, y: rect.top + rect.height / 2 - window.innerHeight / 2 });
-      setSubmitting(true);
-      // Send the answers to Google Sheets (fire-and-forget; never blocks the UX).
-      void submitToGoogleSheets({ ...answers, [question.id]: nextValue });
-      // keep submit transition duration just long enough for animations to finish
-      window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, effectiveReducedMotion ? 0 : 2200);
-      return;
+  async function next(answer?: string) {
+    if (!question || advancingRef.current) return;
+    advancingRef.current = true;
+    try {
+      const nextValue = answer ?? value;
+      const validation = validateQuestion(question, nextValue);
+      if (validation) { setError(validation); return; }
+
+      if (question.id === "email") {
+        const email = nextValue.trim().toLowerCase();
+        const pending = getEmailCheckPromise(email);
+        if (pending) {
+          setEmailStatus("checking");
+          const status = await pending;
+          if (status === "taken") {
+            setError("This email has already been used for a registration.");
+            return;
+          }
+        }
+      }
+
+      setAnswers((current) => ({ ...current, [question.id]: nextValue }));
+      setError(null);
+      const nextIndex = resolveNextQuestionIndex(index, nextValue, answers);
+      if (nextIndex === null) {
+        const submitButton = document.querySelector<HTMLElement>("[data-submit-button]");
+        const rect = submitButton?.getBoundingClientRect();
+        if (rect) setSubmitOrigin({ x: rect.left + rect.width / 2 - window.innerWidth / 2, y: rect.top + rect.height / 2 - window.innerHeight / 2 });
+        setSubmitting(true);
+        // Send the answers to Google Sheets (fire-and-forget; never blocks the UX).
+        void submitToGoogleSheets({ ...answers, [question.id]: nextValue });
+        // keep submit transition duration just long enough for animations to finish
+        window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, effectiveReducedMotion ? 0 : 2200);
+        return;
+      }
+      setHistory((current) => [...current, index]);
+      setDirection(1); setIndex(nextIndex);
+    } finally {
+      advancingRef.current = false;
     }
-    setHistory((current) => [...current, index]);
-    setDirection(1); setIndex(nextIndex);
   }
 
   function back() {
@@ -201,7 +300,7 @@ export function TypeformFlow() {
         <div className="form-content">
           <AnimatePresence mode="wait" custom={direction}>
             {!started ? <Intro key="intro" onBegin={begin} reducedMotion={effectiveReducedMotion} /> : null}
-            {question ? <Question key={question.id} question={question} questionNumber={currentStep} value={value} answers={answers} error={error} inputRef={inputRef} direction={direction} slide={slide} onChange={(newValue) => { setAnswers((current) => ({ ...current, [question.id]: newValue })); setError(null); }} onChoose={choose} onNext={() => next()} onKeyDown={onInputKeyDown} /> : null}
+            {question ? <Question key={question.id} question={question} questionNumber={currentStep} value={value} answers={answers} error={error} emailStatus={emailStatus} inputRef={inputRef} direction={direction} slide={slide} onChange={(newValue) => { setAnswers((current) => ({ ...current, [question.id]: newValue })); setError(null); }} onChoose={choose} onNext={() => next()} onKeyDown={onInputKeyDown} /> : null}
             {submitted ? <Completion key="completion" onRestart={returnToWelcome} reducedMotion={effectiveReducedMotion} /> : null}
           </AnimatePresence>
           <AnimatePresence>{submitting ? <SubmitTransition key="submit-transition" origin={submitOrigin} reducedMotion={effectiveReducedMotion} /> : null}</AnimatePresence>
@@ -226,13 +325,28 @@ function Intro({ onBegin, reducedMotion }: { onBegin: () => void; reducedMotion:
   </motion.div>;
 }
 
-type QuestionProps = { question: NonNullable<ReturnType<typeof getQuestionByIndex>>; questionNumber: number; value: string; answers: AnswerMap; error: string | null; inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>; direction: 1 | -1; slide: Variants; onChange: (value: string) => void; onChoose: (value: string) => void; onNext: () => void; onKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void };
-function Question({ question, questionNumber, value, answers, error, inputRef, direction, slide, onChange, onChoose, onNext, onKeyDown }: QuestionProps) {
+type QuestionProps = { question: NonNullable<ReturnType<typeof getQuestionByIndex>>; questionNumber: number; value: string; answers: AnswerMap; error: string | null; emailStatus: EmailStatus; inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>; direction: 1 | -1; slide: Variants; onChange: (value: string) => void; onChoose: (value: string) => void; onNext: () => void; onKeyDown: (event: KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void };
+function Question({ question, questionNumber, value, answers, error, emailStatus, inputRef, direction, slide, onChange, onChoose, onNext, onKeyDown }: QuestionProps) {
+  const validationMessage = error ?? (question.id === "email"
+    ? emailStatus === "checking"
+      ? "Checking email availability…"
+      : emailStatus === "taken"
+        ? "This email has already been used for a registration."
+        : emailStatus === "available"
+          ? "Email is available ✓"
+          : "Your response is saved automatically"
+    : "Your response is saved automatically");
+  const validationClass = error || (question.id === "email" && emailStatus === "taken")
+    ? "is-error"
+    : question.id === "email" && emailStatus === "available"
+      ? "is-success"
+      : "";
+
   return <motion.article className="question" custom={direction} variants={slide} initial="initial" animate="animate" exit="exit">
     <p className="eyebrow">Question {String(questionNumber).padStart(2, "0")}</p><h1>{question.prompt}</h1><p className="helper">{question.helper}</p>
     <div className="answer-area">
       {question.type === "multipleChoice" ? <div className="choices">{question.options?.map((option, optionIndex) => <motion.button key={option.value} type="button" className={`choice ${answers[question.id] === option.value ? "selected" : ""}`} onClick={() => onChoose(option.value)} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.14 + optionIndex * 0.07 }} whileHover={{ x: 4 }} whileTap={{ scale: 0.99 }}><span className="choice-key">{optionIndex + 1}</span><span><strong>{option.label}</strong><small>{option.description}</small></span><span className="choice-mark">✓</span></motion.button>)}</div> : question.multiline ? <textarea ref={inputRef as React.RefObject<HTMLTextAreaElement>} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder={question.placeholder} aria-label={question.prompt} /> : <input ref={inputRef as React.RefObject<HTMLInputElement>} value={value} onChange={(event) => onChange(event.target.value)} onKeyDown={onKeyDown} placeholder={question.placeholder} inputMode={question.inputMode} aria-label={question.prompt} />}
-      {question.type !== "multipleChoice" ? <div className="next-row"><span className={`validation ${error ? "is-error" : ""}`}>{error ?? "Your response is saved automatically"}</span><button type="button" className="next-button" onClick={onNext} data-submit-button={question.id === "story" || undefined}>{question.id === "story" ? "Submit" : "Continue"} <span>↵</span></button></div> : null}
+      {question.type !== "multipleChoice" ? <div className="next-row"><span className={`validation ${validationClass}`}>{validationMessage}</span><button type="button" className="next-button" onClick={onNext} data-submit-button={question.id === "story" || undefined}>{question.id === "story" ? "Submit" : "Continue"} <span>↵</span></button></div> : null}
     </div>
   </motion.article>;
 }

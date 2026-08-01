@@ -43,6 +43,7 @@ This document is the complete guide to the project: how it is structured, how th
    - 8.6 Duplicate-Email Protection
    - 8.7 Security Considerations
    - 8.8 Quotas, Rate Limits & Alternatives
+   - 8.9 Real-Time Email Availability Check (`/api/check-email`)
 9. [Environment Variables Reference](#9-environment-variables-reference)
 10. [Customization Guide](#10-customization-guide)
     - 10.1 Changing Questions
@@ -85,7 +86,7 @@ The form is intentionally a **dummy / test** checkout flow ("Business Conclave 2
 | **Reduced-motion support** | Respects `prefers-reduced-motion`; users can also force motion on/off with the ⚡ toggle. |
 | **Cinematic submit** | A "Sending your answers" transition plays between the last question and the completion screen. |
 | **Google Sheets sink** | Completed responses are POSTed to `/api/submit`, proxied to a Google Apps Script Web App, and appended to a Google Sheet with a timestamp. |
-| **Duplicate protection** | The Apps Script rejects submissions whose normalized email already exists in the sheet. |
+| **Duplicate protection** | The Apps Script rejects submissions whose normalized email already exists in the sheet — both in real time while typing (`/api/check-email`) and again at submit time. |
 | **Token-protected endpoint** | The Apps Script only accepts payloads carrying the shared secret token. |
 
 ---
@@ -112,6 +113,8 @@ The form is intentionally a **dummy / test** checkout flow ("Business Conclave 2
 Forms/
 ├─ app/
 │  ├─ api/
+│  │  ├─ check-email/
+│  │  │  └─ route.ts          # Real-time email availability proxy
 │  │  └─ submit/
 │  │     └─ route.ts          # POST proxy -> Google Apps Script
 │  ├─ globals.css             # Design system, themes, animations
@@ -255,8 +258,8 @@ A question can declare its `nextStep` in three ways:
 
 - **Required** questions reject empty/whitespace-only input with:
   > _This question needs an answer before you can continue._
-- **Email** questions reject values that fail `/^[^\s@]+@[^\s@]+\.[^\s@]+$/` with:
-  > _Enter a valid email address._
+- **Email** questions reject values that fail `/^[^\s@]+@snu\.edu\.in$/i` (case-insensitive, `@snu.edu.in` only) with:
+  > _Enter a valid email address ending with '@snu.edu.in'._
 - Optional questions always pass.
 
 Errors render under the input with the `.is-error` class (danger color) and are cleared as soon as the user types.
@@ -527,6 +530,8 @@ The requirement is that **the same email cannot submit twice**. `findEmailRow_(s
 
 If a match is found, `doPost` immediately returns `{ ok: false, status: "duplicate", ... }` and nothing is written. The Next.js proxy passes this through unchanged; the client logs a warning (the completion screen still shows, so the user experience is unaffected).
 
+**Real-time availability check.** While the user is on the email question, the client debounces keystrokes (450ms) and POSTs to `/api/check-email`, which forwards `{ token, action: "check", email }` to the same Web App. The Apps Script returns `{ ok: true, exists: false }` when the address is free, or `{ ok: true, exists: true }` when it has already registered. The UI shows "Checking email availability…", "Email is available ✓", or "This email has already been used for a registration." and blocks advancing if the email is taken. The proxy fails open (network errors degrade to no status), so the form is never blocked by a failed lookup. The `google-apps-script/Code.gs` file in this repo already implements `action: "check"` — paste it into your Apps Script editor and redeploy to enable the lookup.
+
 ### 8.7 Security Considerations
 
 | Concern | Mitigation |
@@ -548,6 +553,34 @@ If a match is found, `doPost` immediately returns `{ ok: false, status: "duplica
   - **Sheet.best** — a hosted service that turns a Google Sheet into a REST API (supports `POST` inserts and CORS) — remove the proxy and call it directly if you accept a third-party dependency.
   - **n8n** — self-hosted workflow automation that can watch a webhook and append to Sheets.
   - **Google Forms** — if you do not need the custom UI, Google Forms writes to a sheet natively (but without the cinematic experience).
+
+### 8.9 Real-Time Email Availability Check (`/api/check-email`)
+
+**Endpoint:** `POST /api/check-email`
+
+Fired from the email question while the user types (debounced 450ms). The client only queries when the value already passes the `@snu.edu.in` format check.
+
+**Request body:**
+
+```json
+{
+  "email": "rj910@snu.edu.in"
+}
+```
+
+**Responses:**
+
+| Status | Body | Meaning |
+|---|---|---|
+| `200` | `{ "ok": true, "exists": false }` | Email is available |
+| `200` | `{ "ok": true, "exists": true }` | Email already registered |
+| `400` | `{ "ok": false, "error": "Missing or invalid 'email' value." }` | Bad payload / wrong format |
+| `500` | `{ "ok": false, "error": "Google Sheets integration is not configured..." }` | Missing env vars |
+| `502` | `{ "ok": false, "error": "Could not reach the Google Apps Script Web App..." }` | Network/deployment failure |
+
+The route is `dynamic = "force-dynamic"` and runs on the Node.js runtime, same as `/api/submit`. Like the submit proxy, it keeps the shared token server-side and forwards `{ token, action: "check", email }` to the Apps Script.
+
+> **Important:** The real-time lookup requires the new `google-apps-script/Code.gs` (which handles `action: "check"`). If your deployed Web App is still running the old script without that branch, the proxy will receive a fallback response and the client will simply stay in the "idle" state — the form still works, it just cannot show availability.
 
 ---
 

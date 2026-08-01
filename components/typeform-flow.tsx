@@ -14,7 +14,7 @@ import {
 
 const STORAGE_KEY = "typeform-flow-demo";
 const THEME_KEY = "typeform-flow-theme";
-type Theme = "dark" | "light";
+type Theme = "light" | "dark";
 type EmailStatus = "idle" | "checking" | "available" | "taken";
 
 export function TypeformFlow() {
@@ -97,7 +97,7 @@ export function TypeformFlow() {
 
     const timer = window.setTimeout(() => {
       void getEmailCheckPromise(email);
-    }, 450);
+    }, 150);
 
     return () => {
       window.clearTimeout(timer);

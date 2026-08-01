@@ -100,7 +100,7 @@ export const questionSchema: Question[] = [
     helper: "This stands in for the customer or billing name field.",
     type: "text",
     required: true,
-    placeholder: "Alex Rivera",
+    placeholder: "Rishabh Joshi",
     nextStep: "email",
   },
   {
@@ -109,7 +109,7 @@ export const questionSchema: Question[] = [
     helper: "This is the final required checkout contact field for testing.",
     type: "email",
     required: true,
-    placeholder: "alex@studio.com",
+    placeholder: "rj910@snu.edu.in",
     inputMode: "email",
     nextStep: "story",
   },

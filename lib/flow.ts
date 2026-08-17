@@ -106,10 +106,10 @@ export const questionSchema: Question[] = [
   {
     id: "email",
     prompt: "Where should the confirmation email be sent?",
-    helper: "This is the final required checkout contact field for testing.",
+    helper: "Any valid email address works — responses are sent here for testing.",
     type: "email",
     required: true,
-    placeholder: "rj910@snu.edu.in",
+    placeholder: "you@example.com",
     inputMode: "email",
     nextStep: "story",
   },
@@ -160,7 +160,14 @@ export function resolveNextQuestionIndex(
   return null;
 }
 
-/** Matches local-part@snu.edu.in (case-insensitive, literal dots escaped). */
+/** Generic RFC-5322-ish email check. Used by the test/dummy form. */
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export function isValidEmail(value: string) {
+  return EMAIL_PATTERN.test(value.trim());
+}
+
+/** SNU-domain-specific check — kept for BCON / institutional forms. */
 export const SNU_EMAIL_PATTERN = /^[^\s@]+@snu\.edu\.in$/i;
 
 export function isValidSnuEmail(value: string) {
@@ -178,8 +185,8 @@ export function validateQuestion(question: Question, value: string) {
     return "This question needs an answer before you can continue.";
   }
 
-  if (question.type === "email" && !isValidSnuEmail(trimmedValue)) {
-    return "Enter a valid email address ending with '@snu.edu.in'.";
+  if (question.type === "email" && !isValidEmail(trimmedValue)) {
+    return "Enter a valid email address (e.g. you@example.com).";
   }
 
   return null;

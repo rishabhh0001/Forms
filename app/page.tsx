@@ -64,7 +64,11 @@ export default function LandingPage() {
           filter: blur(2px);
           animation-delay: -7s;
         }
-        @keyframes lpFloat { 50% { transform: translate3d(14px, 9px, 0) rotate(5deg); } }
+        @keyframes lpFloat {
+          0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(1); }
+          33% { transform: translate3d(24px, -18px, 0) rotate(8deg) scale(1.05); }
+          66% { transform: translate3d(-15px, 22px, 0) rotate(-4deg) scale(0.95); }
+        }
 
         .lp-header {
           text-align: center;

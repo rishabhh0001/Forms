@@ -31,7 +31,7 @@ export function BconFlow() {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const reducedMotion = useReducedMotion();
   const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
-  const emailCheckInFlightRef = useRef<{ email: string; promise: Promise<EmailStatus> } | null>(null);
+  const emailCheckInFlightRef = useRef<{ email: string; promise: Promise<{ status: EmailStatus; error?: string }> } | null>(null);
   const emailCheckSeqRef = useRef(0);
   const advancingRef     = useRef(false);
   const rm = reducedMotion ?? false;
@@ -92,35 +92,35 @@ export function BconFlow() {
     }
   }
 
-  function fireEmailCheck(email: string, seq: number): Promise<EmailStatus> | null {
+  function fireEmailCheck(email: string, seq: number): Promise<{ status: EmailStatus; error?: string }> | null {
     if (!isValidEmail(email)) return null;
     const existing = emailCheckInFlightRef.current;
     if (existing && existing.email === email) return existing.promise;
 
-    let resolve!: (s: EmailStatus) => void;
-    const promise = new Promise<EmailStatus>((r) => { resolve = r; });
+    let resolve!: (s: { status: EmailStatus; error?: string }) => void;
+    const promise = new Promise<{ status: EmailStatus; error?: string }>((r) => { resolve = r; });
     const entry = { email, promise };
     emailCheckInFlightRef.current = entry;
 
     void fetch("/api/check-email", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, formId: FORM_ID }),
     })
       .then((r) => r.json().catch(() => null))
-      .then((data: { ok?: boolean; exists?: boolean } | null) => {
+      .then((data: { ok?: boolean; exists?: boolean; error?: string } | null) => {
         const status: EmailStatus =
           data?.ok && typeof data.exists === "boolean"
             ? data.exists ? "taken" : "available"
             : "idle";
         if (emailCheckInFlightRef.current === entry) emailCheckInFlightRef.current = null;
         if (seq === emailCheckSeqRef.current) setEmailStatus(status);
-        resolve(status);
+        resolve({ status, error: data?.error });
       })
       .catch(() => {
         if (emailCheckInFlightRef.current === entry) emailCheckInFlightRef.current = null;
         if (seq === emailCheckSeqRef.current) setEmailStatus("idle");
-        resolve("idle");
+        resolve({ status: "idle", error: "Network error while checking email." });
       });
 
     return promise;
@@ -167,9 +167,13 @@ export function BconFlow() {
         const pending = fireEmailCheck(email, seq);
         if (pending) {
           setEmailStatus("checking");
-          const status = await pending;
+          const { status, error: backendError } = await pending;
           if (status === "taken") {
             setError("This email is already registered for Business Conclave 2026.");
+            return;
+          }
+          if (status === "idle") {
+            setError(backendError || "Could not verify email. Please try again.");
             return;
           }
         }
@@ -229,11 +233,11 @@ export function BconFlow() {
     if (e.key === "Escape") back();
   }
 
-  const pageMotion = rm ? { duration: 0 } : { duration: 0.48, ease: [0.16, 1, 0.3, 1] as const };
+  const pageMotion = rm ? { duration: 0 } : { type: "spring", stiffness: 220, damping: 25, mass: 1 };
   const slide: Variants = {
-    initial: (d: number) => ({ opacity: 0, y: d > 0 ? 38 : -38, filter: "blur(8px)" }),
-    animate: { opacity: 1, y: 0, filter: "blur(0px)", transition: pageMotion },
-    exit:    (d: number) => ({ opacity: 0, y: d > 0 ? -28 : 28, filter: "blur(4px)", transition: { duration: rm ? 0 : 0.24 } }),
+    initial: (d: number) => ({ opacity: 0, y: d > 0 ? 50 : -50, scale: 0.96, rotateX: d > 0 ? 4 : -4, filter: "blur(12px)" }),
+    animate: { opacity: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)", transition: pageMotion },
+    exit:    (d: number) => ({ opacity: 0, y: d > 0 ? -30 : 30, scale: 0.98, rotateX: d > 0 ? -2 : 2, filter: "blur(6px)", transition: { duration: rm ? 0 : 0.2, ease: "easeIn" } }),
   };
 
   const userEmail = answers["email"] ?? "";

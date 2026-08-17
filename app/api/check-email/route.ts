@@ -9,7 +9,7 @@ const SHARED_TOKEN = process.env.GOOGLE_SHEETS_TOKEN;
 
 export async function POST(request: Request) {
   try {
-    let body: { email?: unknown };
+    let body: { email?: unknown, formId?: unknown };
     try {
       body = await request.json();
     } catch {
@@ -17,6 +17,7 @@ export async function POST(request: Request) {
     }
 
     const email = typeof body.email === "string" ? body.email.trim().toLowerCase() : "";
+    const formId = typeof body.formId === "string" ? body.formId.trim() : "";
 
     if (!email || !isValidEmail(email)) {
       return NextResponse.json(
@@ -37,7 +38,7 @@ export async function POST(request: Request) {
       upstream = await fetch(WEB_APP_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: SHARED_TOKEN, action: "check", email }),
+        body: JSON.stringify({ token: SHARED_TOKEN, action: "check", email, formId }),
         cache: "no-store",
       });
     } catch {

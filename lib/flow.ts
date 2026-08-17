@@ -6,9 +6,10 @@ export type ChoiceOption = {
   label: string;
   value: string;
   description: string;
+  disabled?: boolean;
 };
 
-export type QuestionId = "goal" | "capacity" | "timeline" | "cadence" | "name" | "email" | "story";
+export type QuestionId = "ticket_type" | "name" | "email" | "phone" | "roll_number" | "college" | "questions_for_speakers";
 export type NextStepRule = QuestionId | ((value: string, answers: AnswerMap) => QuestionId | null) | null;
 
 export type Question = {
@@ -26,100 +27,80 @@ export type Question = {
 
 export const questionSchema: Question[] = [
   {
-    id: "goal",
-    prompt: "What are you testing in this dummy checkout flow?",
-    helper: "Pick the path that best matches the sample scenario you want to preview.",
+    id: "ticket_type",
+    prompt: "Ticket type",
+    helper: "Select the event you wish to register for.",
     type: "multipleChoice",
     required: true,
     options: [
       {
-        label: "Digital order",
-        description: "A downloadable product with no shipping step.",
-        value: "digital_order",
+        label: "Conference",
+        description: "Standard access to the Business Conclave.",
+        value: "conference",
       },
       {
-        label: "Physical product",
-        description: "A normal shipping flow with a delivery address.",
-        value: "physical_product",
+        label: "DJ Night",
+        description: "Access to the DJ Night.",
+        value: "dj_night",
+        disabled: true,
       },
-      {
-        label: "Subscription",
-        description: "A recurring purchase with a payment-focused path.",
-        value: "subscription",
-      },
-    ],
-    nextStep: (value) => {
-      if (value === "digital_order") return "name";
-      if (value === "physical_product") return "capacity";
-      if (value === "subscription") return "cadence";
-      return null;
-    },
-  },
-  {
-    id: "capacity",
-    prompt: "How fast should the dummy delivery arrive?",
-    helper: "This placeholder shipping step helps test branching, progress, and motion.",
-    type: "multipleChoice",
-    required: true,
-    options: [
-      { label: "Standard shipping", description: "Arrives in 3-5 business days.", value: "standard" },
-      { label: "Express shipping", description: "Arrives in 1-2 business days.", value: "express" },
-      { label: "Overnight", description: "Fastest test path for checkout completion.", value: "overnight" },
-    ],
-    nextStep: "timeline",
-  },
-  {
-    id: "timeline",
-    prompt: "Any delivery instructions for the test order?",
-    helper: "This extra checkout step makes the physical-product path feel more realistic.",
-    type: "multipleChoice",
-    required: true,
-    options: [
-      { label: "Leave at the door", description: "A fast, low-friction delivery preference.", value: "door" },
-      { label: "Signature required", description: "A more secure handoff for the test checkout.", value: "signature" },
-      { label: "Hold at front desk", description: "Useful for office or apartment deliveries.", value: "front_desk" },
-    ],
-    nextStep: "name",
-  },
-  {
-    id: "cadence",
-    prompt: "How often should this dummy checkout repeat?",
-    helper: "A recurring test path is useful for subscriptions and repeat customers.",
-    type: "multipleChoice",
-    required: true,
-    options: [
-      { label: "Once", description: "A single checkout pass.", value: "once" },
-      { label: "Weekly", description: "A recurring subscription check-in.", value: "weekly" },
-      { label: "Whenever it matters", description: "Trigger it from an action or cart event.", value: "event" },
     ],
     nextStep: "name",
   },
   {
     id: "name",
-    prompt: "What name should appear on the dummy order?",
-    helper: "This stands in for the customer or billing name field.",
+    prompt: "Full Name",
+    helper: "Enter your full name as it should appear on your pass.",
     type: "text",
     required: true,
-    placeholder: "Rishabh Joshi",
+    placeholder: "e.g. Jane Doe",
     nextStep: "email",
   },
   {
     id: "email",
-    prompt: "Where should the confirmation email be sent?",
-    helper: "Any valid email address works — responses are sent here for testing.",
+    prompt: "Email Address",
+    helper: "We will send your confirmation and ticket to this address.",
     type: "email",
     required: true,
     placeholder: "you@example.com",
     inputMode: "email",
-    nextStep: "story",
+    nextStep: "phone",
   },
   {
-    id: "story",
-    prompt: "Anything else we should test before completing the dummy order?",
-    helper: "Shift+Enter makes a line break. Enter continues. This note is just for testing.",
+    id: "phone",
+    prompt: "Phone Number",
+    helper: "Enter a valid mobile number.",
+    type: "text",
+    required: true,
+    placeholder: "e.g. +91 98765 43210",
+    inputMode: "tel",
+    nextStep: "roll_number",
+  },
+  {
+    id: "roll_number",
+    prompt: "Roll number",
+    helper: "Optional. Required for SNU students.",
+    type: "text",
+    required: false,
+    placeholder: "e.g. 21BMS123",
+    nextStep: "college",
+  },
+  {
+    id: "college",
+    prompt: "College / Organization",
+    helper: "Enter the name of your college, university, or company.",
+    type: "text",
+    required: true,
+    placeholder: "e.g. Shiv Nadar University",
+    nextStep: "questions_for_speakers",
+  },
+  {
+    id: "questions_for_speakers",
+    prompt: "Any question you'd like the speakers/management to address?",
+    helper: "Optional. Let us know if you have any questions for the panel.",
     type: "textarea",
     required: false,
-    placeholder: "Add notes about the test scenario, edge cases, or checkout variations.",
+    placeholder: "Your questions here...",
     multiline: true,
     nextStep: null,
   },

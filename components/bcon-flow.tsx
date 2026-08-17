@@ -475,14 +475,15 @@ function BconQuestion({
               <motion.button
                 key={option.value}
                 type="button"
+                disabled={option.disabled}
                 id={`bcon-choice-${option.value}`}
-                className={`bcon-choice ${answers[question.id] === option.value ? "bcon-choice-selected" : ""}`}
-                onClick={() => onChoose(option.value)}
+                className={`bcon-choice ${answers[question.id] === option.value ? "bcon-choice-selected" : ""} ${option.disabled ? "bcon-choice-disabled" : ""}`}
+                onClick={() => !option.disabled && onChoose(option.value)}
                 initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
+                animate={{ opacity: option.disabled ? 0.5 : 1, y: 0 }}
                 transition={{ delay: 0.14 + i * 0.07 }}
-                whileHover={{ x: 4 }}
-                whileTap={{ scale: 0.99 }}
+                whileHover={option.disabled ? {} : { x: 4 }}
+                whileTap={option.disabled ? {} : { scale: 0.99 }}
               >
                 <span className="bcon-choice-key">{i + 1}</span>
                 <span>
@@ -524,9 +525,9 @@ function BconQuestion({
               id="bcon-next-btn"
               className="bcon-next-btn"
               onClick={onNext}
-              data-submit-button={question.id === "story" || undefined}
+              data-submit-button={question.id === "questions_for_speakers" || undefined}
             >
-              {question.id === "story" ? "Submit" : "Continue"} <span>↵</span>
+              {question.id === "questions_for_speakers" ? "Submit" : "Continue"} <span>↵</span>
             </button>
           </div>
         ) : null}

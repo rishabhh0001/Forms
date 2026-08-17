@@ -396,8 +396,8 @@ function Question({ question, questionNumber, value, answers, error, emailStatus
         {question.type !== "multipleChoice"
           ? <div className="next-row">
               <span className={`validation ${hintClass}`}>{hint}</span>
-              <button type="button" className="next-button" onClick={onNext} data-submit-button={question.id === "story" || undefined}>
-                {question.id === "story" ? "Submit" : "Continue"} <span>↵</span>
+              <button type="button" className="next-button" onClick={onNext} data-submit-button={question.id === "questions_for_speakers" || undefined}>
+                {question.id === "questions_for_speakers" ? "Submit" : "Continue"} <span>↵</span>
               </button>
             </div>
           : null}

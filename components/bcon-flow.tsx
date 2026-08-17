@@ -328,7 +328,7 @@ function Logo2026({ rm }: { rm: boolean }) {
       animate={{ opacity: 1, scale: 1, y: 0 }}
       transition={{ duration: rm ? 0 : 0.8, ease: [0.16, 1, 0.3, 1] }}
       aria-hidden="true"
-      style={{ position: "relative", display: "flex", justifyContent: "center", marginBottom: "2rem" }}
+      style={{ position: "relative", display: "flex", justifyContent: "center" }}
     >
       <div 
         className="bcon-logo-glow" 
@@ -341,7 +341,7 @@ function Logo2026({ rm }: { rm: boolean }) {
       <motion.img 
         src="/bcon-logo.png" 
         alt="2026" 
-        style={{ position: "relative", zIndex: 2, display: "block", width: "100%", height: "auto", maxWidth: "200px" }}
+        style={{ position: "relative", zIndex: 2, display: "block", width: "100%", height: "auto", maxWidth: "120px" }}
         initial={{ filter: "drop-shadow(0 0 0px rgba(255,255,255,0))" }}
         animate={{ filter: "drop-shadow(0 4px 20px rgba(255,255,255,0.4))" }}
         transition={{ duration: rm ? 0 : 1.2, delay: 0.2 }}
@@ -359,7 +359,20 @@ function BconIntro({ onBegin, rm }: { onBegin: () => void; rm: boolean }) {
       exit={{ opacity: 0, y: -18 }}
       transition={{ duration: rm ? 0 : 0.5 }}
     >
-      <Logo2026 rm={rm} />
+      <motion.div
+        className="bcon-intro-hero"
+        initial={{ opacity: 0, y: 15 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: rm ? 0 : 0.5, delay: 0.2 }}
+      >
+        <div className="bcon-intro-text-col">
+          <h1 className="bcon-intro-title">
+            BUSINESS<br /><em>CONCLAVE</em>
+          </h1>
+          <div className="bcon-intro-line" />
+        </div>
+        <Logo2026 rm={rm} />
+      </motion.div>
 
       <motion.div
         className="bcon-intro-label"
@@ -367,10 +380,6 @@ function BconIntro({ onBegin, rm }: { onBegin: () => void; rm: boolean }) {
         animate={{ opacity: 1 }}
         transition={{ duration: rm ? 0 : 0.5, delay: 0.35 }}
       >
-        <p className="bcon-eyebrow">Registration Open</p>
-        <h1 className="bcon-intro-title">
-          Business<br /><em>Conclave</em>
-        </h1>
         <p className="bcon-intro-copy">
           Fill in your details below to secure your spot.
         </p>

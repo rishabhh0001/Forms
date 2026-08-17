@@ -1,12 +1,12 @@
 @import url("https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:wght@400;500;600&display=swap");
 
 :root {
-  --bcon-deep:    #2D1147;
-  --bcon-mauve:   #816493;
+  --bcon-deep:    #0B0514;
+  --bcon-mauve:   #a388ff;
   --bcon-white:   #ffffff;
-  --bcon-gold:    #cfaf89;
-  --bcon-violet:  #c664db;
-  --bcon-magenta: #ba27ce;
+  --bcon-gold:    #ff66c4;
+  --bcon-violet:  #9b79f8;
+  --bcon-magenta: #f85cc6;
   --bcon-ink:     #f0eaf8;
   --bcon-muted:   rgba(240,234,248,0.52);
   --bcon-faint:   rgba(255,255,255,0.06);
@@ -251,6 +251,25 @@
   pointer-events: none;
 }
 
+.bcon-intro-hero {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: left;
+}
+.bcon-intro-text-col {
+  display: flex;
+  flex-direction: column;
+}
+.bcon-intro-line {
+  height: 2px;
+  width: 60%;
+  background: linear-gradient(90deg, var(--bcon-magenta), transparent);
+  margin-top: 1rem;
+}
+
 .bcon-eyebrow {
   margin: 0 0 16px;
   color: var(--bcon-gold);
@@ -267,7 +286,7 @@
 }
 .bcon-intro-title em {
   font-style: normal;
-  background: linear-gradient(135deg, var(--bcon-violet) 10%, var(--bcon-gold) 95%);
+  background: linear-gradient(90deg, var(--bcon-violet) 0%, var(--bcon-magenta) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -608,6 +627,9 @@ textarea.bcon-input { min-height: 130px; }
   .bcon-header { padding-left: 16px; padding-right: 16px; }
   .bcon-back-btn span { display: none; }
   .bcon-content { padding: 26px 20px; }
+  .bcon-intro-hero { flex-direction: column; gap: 0.5rem; text-align: center; }
+  .bcon-intro-text-col { align-items: center; }
+  .bcon-intro-line { width: 80%; background: radial-gradient(circle, var(--bcon-magenta), transparent 80%); }
   .bcon-intro-title, .bcon-completion-title { font-size: clamp(34px, 10.5vw, 50px); }
   .bcon-question-title { font-size: clamp(28px, 9vw, 46px); }
   .bcon-logo-num { font-size: clamp(60px, 16vw, 96px); }

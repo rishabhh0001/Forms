@@ -323,45 +323,29 @@ export function BconFlow() {
 function Logo2026({ rm }: { rm: boolean }) {
   return (
     <motion.div
-      className="bcon-logo-2026"
-      initial={{ opacity: 0, scale: 0.88 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: rm ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] }}
+      className="bcon-logo-2026-image"
+      initial={{ opacity: 0, scale: 0.88, y: 15 }}
+      animate={{ opacity: 1, scale: 1, y: 0 }}
+      transition={{ duration: rm ? 0 : 0.8, ease: [0.16, 1, 0.3, 1] }}
       aria-hidden="true"
+      style={{ position: "relative", display: "flex", justifyContent: "center", marginBottom: "2rem" }}
     >
-      <div className="bcon-logo-glow" />
-      <motion.span
-        className="bcon-logo-num bcon-logo-2"
-        initial={{ opacity: 0, x: -12, y: -12 }}
-        animate={{ opacity: 1, x: 0, y: 0 }}
-        transition={{ duration: rm ? 0 : 0.5, delay: 0.1 }}
-      >
-        2
-      </motion.span>
-      <motion.span
-        className="bcon-logo-num bcon-logo-0"
-        initial={{ opacity: 0, x: 12, y: -12 }}
-        animate={{ opacity: 1, x: 0, y: 0 }}
-        transition={{ duration: rm ? 0 : 0.5, delay: 0.15 }}
-      >
-        0
-      </motion.span>
-      <motion.span
-        className="bcon-logo-num bcon-logo-2b"
-        initial={{ opacity: 0, x: -12, y: 12 }}
-        animate={{ opacity: 1, x: 0, y: 0 }}
-        transition={{ duration: rm ? 0 : 0.5, delay: 0.2 }}
-      >
-        2
-      </motion.span>
-      <motion.span
-        className="bcon-logo-num bcon-logo-6"
-        initial={{ opacity: 0, x: 12, y: 12 }}
-        animate={{ opacity: 1, x: 0, y: 0 }}
-        transition={{ duration: rm ? 0 : 0.5, delay: 0.25 }}
-      >
-        6
-      </motion.span>
+      <div 
+        className="bcon-logo-glow" 
+        style={{ 
+          opacity: 0.8, 
+          background: "radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 65%)",
+          transform: "scale(1.5)"
+        }} 
+      />
+      <motion.img 
+        src="/bcon-logo.png" 
+        alt="2026" 
+        style={{ position: "relative", zIndex: 2, display: "block", width: "100%", height: "auto", maxWidth: "200px" }}
+        initial={{ filter: "drop-shadow(0 0 0px rgba(255,255,255,0))" }}
+        animate={{ filter: "drop-shadow(0 4px 20px rgba(255,255,255,0.4))" }}
+        transition={{ duration: rm ? 0 : 1.2, delay: 0.2 }}
+      />
     </motion.div>
   );
 }

@@ -39,7 +39,7 @@ export const questionSchema: Question[] = [
         value: "conference",
       },
       {
-        label: "DJ Night",
+        label: "DJ Night (Opening soon)",
         description: "Access to the DJ Night.",
         value: "dj_night",
         disabled: true,

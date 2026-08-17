@@ -1,74 +1,65 @@
-# Forms Platform
+# Forms Platform: Next-Generation Data Intake Engine
 
-A cinematic, motion-driven, multi-step form engine designed to elevate standard data collection into a premium user experience. Built with modern web technologies, this platform trades rigid surveys for fluid, conversational data intake.
+## 1. Executive Summary & Philosophy
 
-## Project Philosophy
+Forms are the critical chokepoint of the digital internet. Most organizations rely on basic, unstyled embedded iframes that break the user's flow, degrade the brand experience, and suffer from high abandonment rates. 
 
-Forms are often the highest-friction point in any digital journey. The goal of this platform is to **remove friction through design**. By isolating one question per screen, employing hardware-accelerated transitions, and providing instant inline validation, the cognitive load on the user is drastically reduced.
+The **Forms Platform** is an enterprise-grade, motion-driven data intake engine built with Next.js and React. It operates on the philosophy of **progressive disclosure**—presenting the user with exactly one question at a time. This reduces cognitive overload, drastically increases completion rates (CXR), and provides a cinematic, hardware-accelerated experience.
 
-### Key Pillars
-1. **Focus**: One question at a time. No scrolling, no overwhelming fields.
-2. **Motion**: Every interaction—from keystrokes to form submission—is choreographed using physical spring physics to feel organic and responsive.
-3. **Resilience**: The frontend seamlessly debounces and queues network requests, while the backend leverages a custom Google Apps Script pipeline with "safe-append" collision detection to ensure zero data loss.
-4. **Accessibility**: Full keyboard navigation support (e.g., `1-9` keys for multiple choice, `Enter` to continue, `Escape` to go back) and reduced-motion preferences respected at the OS level.
+## 2. Architectural Blueprint
 
-## Architecture
+The platform is engineered using a decoupled, serverless architecture that separates the highly interactive presentation layer from the robust, transactional data layer.
 
-The platform is split into two distinct tiers:
+### 2.1 The Presentation Layer (Next.js App Router)
+- **Framework**: React 19 + Next.js 16 (App Router).
+- **State Machine**: The form progression is modeled as a deterministic Finite State Machine (FSM). The engine evaluates the user's current input against a schema (`lib/flow.ts`) and dynamically computes the `nextStep`. This allows for complex, non-linear branching logic (e.g., if a user selects "Physical Product", ask for a shipping address; otherwise, skip to email).
+- **Motion & Layout Projection**: We utilize `framer-motion` for complex layout projections. As the DOM mounts and unmounts question nodes, the engine calculates the inverse transform to ensure elements don't snap abruptly, but rather glide into place using spring physics.
+- **Accessibility (a11y)**: Focus trapping is implemented to automatically push the cursor to the next input field. We natively support `prefers-reduced-motion` CSS media queries and respect OS-level animation disabling, falling back to instant transitions.
+- **CSS Architecture**: 100% Vanilla CSS. We bypass heavy CSS-in-JS runtimes and utility-class frameworks to maintain absolute control over the cascade, CSS variables, and layout engines. We use custom radial-gradient masking and blend modes for background effects.
 
-### 1. The Frontend Application (Next.js 16)
-- **Framework**: Built on React 19 and the Next.js App Router.
-- **Styling**: 100% Vanilla CSS. We bypass heavy CSS-in-JS runtimes and utility-class frameworks to maintain absolute control over the cascade, CSS variables, and layout engines. 
-- **Animation Engine**: `framer-motion` handles complex layout projections, exit animations, and sequenced timeline orchestrations (like the multi-stage submit sequence).
-- **Edge Routing**: API Routes (`/api/submit`, `/api/check-email`) proxy requests from the client to the database, protecting API keys and preventing CORS overhead on the client.
+### 2.2 The Middleware Layer (Next.js API Routes)
+Directly exposing the Google Apps Script endpoint to the client poses a security risk and can lead to CORS preflight latency. 
+- **API Proxy**: Client-side submissions hit `/api/submit`. The serverless edge function then proxies this payload to the Google Apps Script endpoint securely.
+- **Email Validation Protocol**: `/api/check-email` allows the frontend to run debounced, real-time availability checks against the server without blocking the main thread.
 
-### 2. The Database Layer (Google Sheets as a Backend)
-- **Infrastructure**: We use Google Sheets as a lightweight, instantly-accessible CRM.
-- **Middleware**: A custom Google Apps Script (`Code.gs`) acts as the REST endpoint.
-- **Concurrency Handling**: Standard `appendRow()` operations are prone to race conditions and data overwrites under heavy concurrent load. This project uses a custom `findFirstEmptyRow_()` algorithm that scans the sheet programmatically, guaranteeing atomic writes into empty cells regardless of traffic spikes.
-- **Multi-tenancy**: The script routes data into different tabs (e.g., `BCon Responses`, `Test Responses`) based on the `formId` passed from the frontend API.
+### 2.3 The Data Layer (Google Sheets API Engine)
+- **Infrastructure**: Google Sheets acts as a lightweight, instantly-accessible CRM.
+- **Safe-Append Algorithm**: A major flaw in standard Google Forms/Sheets integrations is data overwriting during concurrent high-volume submissions. Our custom Google Apps Script (`Code.gs`) utilizes a `findFirstEmptyRow_()` algorithm. Instead of blindly appending, it traverses the sheet matrix programmatically to lock and write to a genuinely empty row, guaranteeing atomic writes and zero data loss even during traffic spikes.
+- **Multi-Tenant Routing**: The payload includes a `formId` parameter, instructing the backend router to distribute payloads into isolated database shards (Sheet tabs) like `BCon Responses` or `Test Responses`.
 
-## Design Systems & Theming
+## 3. Brand Identities & Theming
 
-The platform supports multiple distinct brand identities operating from the same core engine.
+The engine is highly modular, allowing disparate brand identities to coexist on the same deployment.
 
-### The Global Theme (Dummy Form)
-- **Variables**: Driven by robust CSS variables (`--bg`, `--ink`, `--muted`).
-- **Dark/Light Mode**: Full support for OS-level and user-toggled theme switching, dynamically recoloring the UI and swapping SVG filter blends.
-- **Typography**: Geometric and highly legible combinations of *Montserrat*, *Playfair Display*, and *DM Mono*.
+### 3.1 Business Conclave 2026 (`/bcon`)
+- **Visual Identity**: Regal deep purple (`#2D1147`) heavily accented with metallic gold (`#cfaf89`).
+- **Typography Engine**: Integrated with *Cinzel* for dramatic serif headers and *Libre Baskerville* for legibility in body copy.
+- **Logo Orchestration**: The `/bcon` route utilizes a custom transparent PNG logo with intertwined digits. To ensure perfect contrast on the dark mode DOM, we inject a radiant CSS backdrop (`.bcon-logo-glow`) that dynamically scales via Framer Motion.
 
-### The BCon 2026 Theme (Business Conclave)
-- **Custom Branding**: Fully localized design system overriding the global theme specifically for the `/bcon` route.
-- **Colorway**: Deep regal purple (`#2D1147`) combined with gold accents (`#cfaf89`) and a magenta/violet gradient (`#c664db`).
-- **Typography**: Uses *Cinzel* for dramatic, cinematic headers and *Libre Baskerville* for elegant supporting text.
-- **Logo Animation**: The "2026" logo features a custom SVG/Image composition with a pure CSS radiant glow behind it to ensure visibility and contrast against the dark background.
+### 3.2 The Test Environment (`/test`)
+- **Visual Identity**: A neutral, high-contrast dark theme utilizing monochromatic silvers and subtle magenta accents.
+- **Typography Engine**: Clean, geometric *Montserrat* and *DM Mono*.
+- **Sandbox Features**: Unrestricted email validation (accepts any RFC-5322 valid email), allowing developers to QA the FSM branching logic without triggering production data webhooks.
 
-## The Flow Engine
+## 4. Development & Deployment Pipeline
 
-The core logic of the form lives in `lib/flow.ts`. It is a deterministic state machine that manages:
-- **Branching Logic**: The `nextStep` property can be a static string (next question ID) or a function that evaluates the current answer to dynamically alter the user's path.
-- **State Management**: React state holds the answer map, history stack (for the 'Back' button), and the current active question index.
-- **Real-time Validation**: Validates inputs instantly before allowing the user to proceed. For instance, the email field debounces checks against the backend to verify uniqueness before submission.
+This repository is optimized for Vercel's Edge Network.
+- **Zero-Config Build**: Run `npm run build` to generate static prerendered payloads for all non-dynamic routes.
+- **Type Safety**: The entire codebase is strictly typed with TypeScript. The FSM schema enforces that every question must have a strongly-typed `QuestionId` and `NextStepRule`.
+- **Environment Variables**: Requires `GOOGLE_SHEETS_WEB_APP_URL` and `GOOGLE_SHEETS_TOKEN` for the production pipeline.
 
 ---
 
-## License & Open Source Terms
+## 5. Licensing Information
 
-This project is licensed under the **MIT License**.
+This software is released under the **Apache License 2.0**. 
 
-The MIT License is a permissive free software license originating at the Massachusetts Institute of Technology (MIT). It puts very limited restriction on reuse and has, therefore, high license compatibility.
+The Apache License is a permissive free software license written by the Apache Software Foundation. It allows users to use the software for any purpose, to distribute it, to modify it, and to distribute modified versions of the software under the terms of the license, without concern for royalties.
 
-### Terms and Conditions
+Key provisions include:
+- **Patent Grant**: The license provides an explicit grant of patent rights from contributors to users.
+- **Trademark**: The license explicitly states that it does not grant trademark rights.
+- **Liability**: Includes a limitation of liability and warranty disclaimer.
+- **Redistribution**: Requires preservation of copyright, patent, trademark, and attribution notices.
 
-Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
-
-1. **Attribution**: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. You must give appropriate credit, provide a link to the license, and indicate if changes were made.
-2. **Commercial Use**: You are free to use this software for commercial purposes. You can integrate this form engine into paid products, enterprise applications, or freelance client work.
-3. **Modification**: You may alter, transform, or build upon this software. You are encouraged to fork the design system and build your own custom themes, flows, and animations.
-4. **Distribution**: You may distribute the original or modified software.
-
-### Disclaimer of Warranty
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-*By utilizing this codebase, you acknowledge the open-source philosophy of shared knowledge and are encouraged to contribute architectural improvements, accessibility enhancements, or performance optimizations back to the broader community.*
+For the full, legally binding text, please see the [LICENSE](./LICENSE) file in the root of this repository.

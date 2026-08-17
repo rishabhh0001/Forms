@@ -346,9 +346,10 @@ function Logo2026({ rm }: { rm: boolean }) {
           zIndex: 2, 
           display: "block", 
           width: "auto", 
-          height: "clamp(46px, 7.5vw, 92px)",
+          height: "clamp(48px, 7.9vw, 97px)",
           maxHeight: "100%", 
-          objectFit: "contain"
+          objectFit: "contain",
+          transform: "translateY(-4px)"
         }}
         initial={{ filter: "drop-shadow(0 0 0px rgba(255,255,255,0))" }}
         animate={{ filter: "drop-shadow(0 4px 20px rgba(255,255,255,0.4))" }}

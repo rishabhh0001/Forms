@@ -341,7 +341,15 @@ function Logo2026({ rm }: { rm: boolean }) {
       <motion.img 
         src="/bcon-logo.png" 
         alt="2026" 
-        style={{ position: "relative", zIndex: 2, display: "block", width: "100%", height: "auto", maxWidth: "120px" }}
+        style={{ 
+          position: "relative", 
+          zIndex: 2, 
+          display: "block", 
+          width: "auto", 
+          height: "clamp(46px, 7.5vw, 92px)",
+          maxHeight: "100%", 
+          objectFit: "contain"
+        }}
         initial={{ filter: "drop-shadow(0 0 0px rgba(255,255,255,0))" }}
         animate={{ filter: "drop-shadow(0 4px 20px rgba(255,255,255,0.4))" }}
         transition={{ duration: rm ? 0 : 1.2, delay: 0.2 }}

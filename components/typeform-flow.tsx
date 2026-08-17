@@ -9,6 +9,7 @@ import {
   resolveNextQuestionIndex,
   startQuestionIndex,
   validateQuestion,
+  dummyQuestionSchema,
 } from "../lib/flow";
 
 const STORAGE_KEY = "typeform-flow-demo";
@@ -75,7 +76,7 @@ export function TypeformFlow() {
     return () => window.clearTimeout(t);
   }, [started, submitted, index]);
 
-  const question = started && !submitted ? getQuestionByIndex(index) : null;
+  const question = started && !submitted ? getQuestionByIndex(dummyQuestionSchema, index) : null;
   const value    = question ? (answers[question.id] ?? "") : "";
 
   useEffect(() => {
@@ -195,7 +196,7 @@ export function TypeformFlow() {
 
       setAnswers((prev) => ({ ...prev, [question.id]: nextValue }));
       setError(null);
-      const nextIndex = resolveNextQuestionIndex(index, nextValue, answers);
+      const nextIndex = resolveNextQuestionIndex(dummyQuestionSchema, index, nextValue, answers);
       if (nextIndex === null) {
         const btn  = document.querySelector<HTMLElement>("[data-submit-button]");
         const rect = btn?.getBoundingClientRect();

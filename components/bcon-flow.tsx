@@ -10,6 +10,7 @@ import {
   resolveNextQuestionIndex,
   startQuestionIndex,
   validateQuestion,
+  bconQuestionSchema,
 } from "../lib/flow";
 import "./bcon.css";
 
@@ -54,7 +55,7 @@ export function BconFlow() {
     return () => window.clearTimeout(t);
   }, [started, submitted, index]);
 
-  const question = started && !submitted ? getQuestionByIndex(index) : null;
+  const question = started && !submitted ? getQuestionByIndex(bconQuestionSchema, index) : null;
   const value    = question ? (answers[question.id] ?? "") : "";
 
   useEffect(() => {
@@ -71,7 +72,7 @@ export function BconFlow() {
     return () => { window.clearTimeout(timer); emailCheckSeqRef.current += 1; };
   }, [question?.id, value, started, submitted]);
 
-  const journeyLength = answers.goal === "physical_product" ? 6 : answers.goal === "subscription" ? 5 : 4;
+  const journeyLength = bconQuestionSchema.length;
   const currentStep  = history.length + 1;
   const progress = useMemo(
     () => (started ? (currentStep / journeyLength) * 100 : 0),
@@ -176,7 +177,7 @@ export function BconFlow() {
 
       setAnswers((prev: AnswerMap) => ({ ...prev, [question.id]: nextValue }));
       setError(null);
-      const nextIndex = resolveNextQuestionIndex(index, nextValue, answers);
+      const nextIndex = resolveNextQuestionIndex(bconQuestionSchema, index, nextValue, answers);
       if (nextIndex === null) {
         const btn  = document.querySelector<HTMLElement>("[data-submit-button]");
         const rect = btn?.getBoundingClientRect();

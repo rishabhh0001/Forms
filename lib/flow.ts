@@ -9,7 +9,7 @@ export type ChoiceOption = {
   disabled?: boolean;
 };
 
-export type QuestionId = "ticket_type" | "name" | "email" | "phone" | "roll_number" | "college" | "questions_for_speakers";
+export type QuestionId = "ticket_type" | "name" | "email" | "phone" | "roll_number" | "college" | "questions_for_speakers" | "goal" | "capacity" | "timeline" | "cadence" | "story";
 export type NextStepRule = QuestionId | ((value: string, answers: AnswerMap) => QuestionId | null) | null;
 
 export type Question = {
@@ -25,7 +25,7 @@ export type Question = {
   inputMode?: "text" | "email" | "numeric" | "tel" | "search" | "url";
 };
 
-export const questionSchema: Question[] = [
+export const bconQuestionSchema: Question[] = [
   {
     id: "ticket_type",
     prompt: "Ticket type",
@@ -106,28 +106,127 @@ export const questionSchema: Question[] = [
   },
 ];
 
+export const dummyQuestionSchema: Question[] = [
+  {
+    id: "goal",
+    prompt: "What are you testing in this dummy checkout flow?",
+    helper: "Pick the path that best matches the sample scenario you want to preview.",
+    type: "multipleChoice",
+    required: true,
+    options: [
+      {
+        label: "Digital order",
+        description: "A downloadable product with no shipping step.",
+        value: "digital_order",
+      },
+      {
+        label: "Physical product",
+        description: "A normal shipping flow with a delivery address.",
+        value: "physical_product",
+      },
+      {
+        label: "Subscription",
+        description: "A recurring purchase with a payment-focused path.",
+        value: "subscription",
+      },
+    ],
+    nextStep: (value) => {
+      if (value === "digital_order") return "name";
+      if (value === "physical_product") return "capacity";
+      if (value === "subscription") return "cadence";
+      return null;
+    },
+  },
+  {
+    id: "capacity",
+    prompt: "How fast should the dummy delivery arrive?",
+    helper: "This placeholder shipping step helps test branching, progress, and motion.",
+    type: "multipleChoice",
+    required: true,
+    options: [
+      { label: "Standard shipping", description: "Arrives in 3-5 business days.", value: "standard" },
+      { label: "Express shipping", description: "Arrives in 1-2 business days.", value: "express" },
+      { label: "Overnight", description: "Fastest test path for checkout completion.", value: "overnight" },
+    ],
+    nextStep: "timeline",
+  },
+  {
+    id: "timeline",
+    prompt: "Any delivery instructions for the test order?",
+    helper: "This extra checkout step makes the physical-product path feel more realistic.",
+    type: "multipleChoice",
+    required: true,
+    options: [
+      { label: "Leave at the door", description: "A fast, low-friction delivery preference.", value: "door" },
+      { label: "Signature required", description: "A more secure handoff for the test checkout.", value: "signature" },
+      { label: "Hold at front desk", description: "Useful for office or apartment deliveries.", value: "front_desk" },
+    ],
+    nextStep: "name",
+  },
+  {
+    id: "cadence",
+    prompt: "How often should this dummy checkout repeat?",
+    helper: "A recurring test path is useful for subscriptions and repeat customers.",
+    type: "multipleChoice",
+    required: true,
+    options: [
+      { label: "Once", description: "A single checkout pass.", value: "once" },
+      { label: "Weekly", description: "A recurring subscription check-in.", value: "weekly" },
+      { label: "Whenever it matters", description: "Trigger it from an action or cart event.", value: "event" },
+    ],
+    nextStep: "name",
+  },
+  {
+    id: "name",
+    prompt: "What name should appear on the dummy order?",
+    helper: "This stands in for the customer or billing name field.",
+    type: "text",
+    required: true,
+    placeholder: "Rishabh Joshi",
+    nextStep: "email",
+  },
+  {
+    id: "email",
+    prompt: "Where should the confirmation email be sent?",
+    helper: "Any valid email address works — responses are sent here for testing.",
+    type: "email",
+    required: true,
+    placeholder: "you@example.com",
+    inputMode: "email",
+    nextStep: "story",
+  },
+  {
+    id: "story",
+    prompt: "Anything else we should test before completing the dummy order?",
+    helper: "Shift+Enter makes a line break. Enter continues. This note is just for testing.",
+    type: "textarea",
+    required: false,
+    placeholder: "Add notes about the test scenario, edge cases, or checkout variations.",
+    multiline: true,
+    nextStep: null,
+  },
+];
+
 export const startQuestionIndex = 0;
 
-export const questionIdToIndex = Object.fromEntries(
-  questionSchema.map((question, index) => [question.id, index]),
-) as Record<QuestionId, number>;
-
-export function getQuestionByIndex(index: number) {
-  return questionSchema[index] ?? null;
+export function getQuestionByIndex(schema: Question[], index: number) {
+  return schema[index] ?? null;
 }
 
 export function resolveNextQuestionIndex(
+  schema: Question[],
   currentQuestionIndex: number,
   value: string,
   answers: AnswerMap,
 ): number | null {
-  const question = getQuestionByIndex(currentQuestionIndex);
+  const question = getQuestionByIndex(schema, currentQuestionIndex);
 
   if (!question) {
     return null;
   }
 
   const nextStep = question.nextStep;
+  const questionIdToIndex = Object.fromEntries(schema.map((q, i) => [q.id, i])) as Record<QuestionId, number>;
 
   if (typeof nextStep === "function") {
     const nextQuestionId = nextStep(value, answers);

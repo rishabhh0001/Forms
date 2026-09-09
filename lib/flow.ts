@@ -102,7 +102,7 @@ export const bconQuestionSchema: Question[] = [
     required: true,
     placeholder: "e.g. 123456789012",
     inputMode: "text",
-    nextStep: "college",
+    nextStep: "questions_for_speakers",
   },
   {
     id: "questions_for_speakers",

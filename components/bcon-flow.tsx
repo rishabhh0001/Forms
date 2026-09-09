@@ -169,7 +169,7 @@ export function BconFlow() {
           setEmailStatus("checking");
           const { status, error: backendError } = await pending;
           if (status === "taken") {
-            setError("This email is already registered for Business Conclave 2026.");
+            setError("This email has already been registered for Business Conclave 2026.");
             return;
           }
           if (status === "idle") {

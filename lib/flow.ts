@@ -9,7 +9,7 @@ export type ChoiceOption = {
   disabled?: boolean;
 };
 
-export type QuestionId = "ticket_type" | "name" | "email" | "phone" | "roll_number" | "college" | "questions_for_speakers" | "goal" | "capacity" | "timeline" | "cadence" | "story";
+export type QuestionId = "ticket_type" | "name" | "email" | "phone" | "roll_number" | "college" | "payment_id" | "questions_for_speakers" | "goal" | "capacity" | "timeline" | "cadence" | "story";
 export type NextStepRule = QuestionId | ((value: string, answers: AnswerMap) => QuestionId | null) | null;
 
 export type Question = {
@@ -92,7 +92,17 @@ export const bconQuestionSchema: Question[] = [
     type: "text",
     required: true,
     placeholder: "e.g. Shiv Nadar University",
-    nextStep: "questions_for_speakers",
+    nextStep: "payment_id",
+  },
+  {
+    id: "payment_id",
+    prompt: "UPI Transaction ID",
+    helper: "Enter the 12-digit UPI transaction ID for your payment. (Eg: 12345678XXXX)",
+    type: "text",
+    required: true,
+    placeholder: "e.g. 123456789012",
+    inputMode: "text",
+    nextStep: "college",
   },
   {
     id: "questions_for_speakers",

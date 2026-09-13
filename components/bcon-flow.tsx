@@ -573,7 +573,8 @@ function BconQuestion({
                   const data = await res.json();
                   if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
                   
-                  onChange(data.url);
+                  const fileUrl = data.url || data.fileUrl || data.link || data.webViewLink || (Object.values(data).find(v => typeof v === 'string' && v.startsWith('http'))) || "Upload successful";
+                  onChange(fileUrl as string);
                 } catch (err) {
                   console.error("Upload failed", err);
                 } finally {

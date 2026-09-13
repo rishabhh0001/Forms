@@ -68,7 +68,7 @@ export function BconFlow() {
     }
     const seq = ++emailCheckSeqRef.current;
     setEmailStatus("checking");
-    const timer = window.setTimeout(() => { void fireEmailCheck(email, seq); }, 150);
+    const timer = window.setTimeout(() => { void fireEmailCheck(email, seq); }, 30);
     return () => { window.clearTimeout(timer); emailCheckSeqRef.current += 1; };
   }, [question?.id, value, started, submitted]);
 

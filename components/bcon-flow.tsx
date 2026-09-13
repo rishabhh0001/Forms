@@ -38,16 +38,19 @@ export function BconFlow() {
 
   useEffect(() => {
     try {
-      const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}") as { answers?: AnswerMap };
-      if (saved.answers) setAnswers(saved.answers);
+      const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
+      if (saved.answers && Object.keys(saved.answers).length > 0) setAnswers(saved.answers);
+      if (saved.index !== undefined) setIndex(saved.index);
+      if (saved.history) setHistory(saved.history);
+      if (saved.started) setStarted(saved.started);
     } catch {
       window.localStorage.removeItem(STORAGE_KEY);
     }
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers }));
-  }, [answers]);
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, index, history, started }));
+  }, [answers, index, history, started]);
 
   useEffect(() => {
     if (!started || submitted) return;
@@ -129,10 +132,8 @@ export function BconFlow() {
   }
 
   function begin() {
-    setAnswers({});
-    window.localStorage.removeItem(STORAGE_KEY);
     setStarted(true); setSubmitted(false); setSubmitting(false);
-    setIndex(startQuestionIndex); setHistory([]); setError(null);
+    setError(null);
     setDirection(1); setEmailStatus("idle");
     emailCheckSeqRef.current += 1;
   }

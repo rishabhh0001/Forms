@@ -12,10 +12,7 @@ import {
   validateQuestion,
   bconQuestionSchema,
 } from "../lib/flow";
-import { createClient } from "../utils/supabase/client";
 import "./bcon.css";
-
-const supabase = createClient();
 
 const STORAGE_KEY = "bcon-flow";
 const FORM_ID     = "bcon";
@@ -90,17 +87,7 @@ export function BconFlow() {
         body: JSON.stringify({ formId: FORM_ID, answers: finalAnswers }),
       }).then(r => r.json()).catch(() => null);
 
-      const supabasePromise = supabase.from('registrations').insert([{
-        name: finalAnswers.name,
-        email: finalAnswers.email,
-        phone: finalAnswers.phone,
-        ticket_type: finalAnswers.ticket_type,
-        college: finalAnswers.college,
-        payment_id: finalAnswers.payment_id,
-        questions_for_speakers: finalAnswers.questions_for_speakers
-      }]);
-
-      await Promise.allSettled([resPromise, supabasePromise]);
+      await Promise.allSettled([resPromise]);
     } catch {
       // silent — submission is fire-and-forget
     }
@@ -570,19 +557,34 @@ function BconQuestion({
                 setUploading(true);
                 try {
                   const ext = file.name.split('.').pop();
-                  const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+                  const safeName = (answers["name"] || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
+                  const filename = `${safeName}_${Date.now()}.${ext}`;
                   
-                  const { error: uploadError } = await supabase.storage
-                    .from('payment_proofs')
-                    .upload(fileName, file);
-                    
-                  if (uploadError) throw uploadError;
+                  // Convert file to base64
+                  const base64 = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => {
+                      const result = reader.result as string;
+                      resolve(result.split(',')[1]);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                  });
                   
-                  const { data: { publicUrl } } = supabase.storage
-                    .from('payment_proofs')
-                    .getPublicUrl(fileName);
-                    
-                  onChange(publicUrl);
+                  const res = await fetch("/api/upload", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      filename,
+                      mimeType: file.type,
+                      base64,
+                    }),
+                  });
+                  
+                  const data = await res.json();
+                  if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
+                  
+                  onChange(data.url);
                 } catch (err) {
                   console.error("Upload failed", err);
                 } finally {

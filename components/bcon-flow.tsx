@@ -506,45 +506,43 @@ function BconQuestion({
           </div>
         ) : question.type === "file" ? (
           <div className="bcon-file-upload">
-            <div className="flex gap-4 mb-6 overflow-x-auto pb-2 w-full justify-center">
-              {/* Replace the src with your actual QR code image paths */}
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-36 h-36 sm:w-40 sm:h-40 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
-                  <img src="/QR1.jpeg" alt="QR Code 1" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
-                  <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 1</span>
+            <div className="bcon-qr-container">
+              <div className="bcon-qr-item">
+                <div className="bcon-qr-box">
+                  <img src="/QR1.jpeg" alt="QR Code 1" onError={(e) => e.currentTarget.style.display = 'none'} />
+                  <span className="bcon-qr-fallback">QR 1</span>
                 </div>
-                <span className="text-[10px] mt-2 text-[var(--muted)]">SBI</span>
+                <span className="bcon-qr-label">SBI</span>
               </div>
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-36 h-36 sm:w-40 sm:h-40 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
-                  <img src="/QR2.jpeg" alt="QR Code 2" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
-                  <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 2</span>
+              <div className="bcon-qr-item">
+                <div className="bcon-qr-box">
+                  <img src="/QR2.jpeg" alt="QR Code 2" onError={(e) => e.currentTarget.style.display = 'none'} />
+                  <span className="bcon-qr-fallback">QR 2</span>
                 </div>
-                <span className="text-[10px] mt-2 text-[var(--muted)]">HDFC</span>
+                <span className="bcon-qr-label">HDFC</span>
               </div>
-              <div className="flex flex-col items-center shrink-0">
-                <div className="w-36 h-36 sm:w-40 sm:h-40 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
-                  <img src="/QR3.jpeg" alt="QR Code 3" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
-                  <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 3</span>
+              <div className="bcon-qr-item">
+                <div className="bcon-qr-box">
+                  <img src="/QR3.jpeg" alt="QR Code 3" onError={(e) => e.currentTarget.style.display = 'none'} />
+                  <span className="bcon-qr-fallback">QR 3</span>
                 </div>
-                <span className="text-[10px] mt-2 text-[var(--muted)]">Paytm</span>
+                <span className="bcon-qr-label">Paytm</span>
               </div>
             </div>
 
-            <div className="block sm:hidden mb-6 w-full">
-              <div className="flex items-center justify-center mb-4">
-                <div className="h-px bg-[var(--line)] flex-1"></div>
-                <span className="px-4 text-[10px] uppercase text-[var(--muted)]">OR</span>
-                <div className="h-px bg-[var(--line)] flex-1"></div>
+            <div className="bcon-mobile-upi">
+              <div className="bcon-mobile-upi-divider">
+                <div className="bcon-mobile-upi-line"></div>
+                <span className="bcon-mobile-upi-text">OR</span>
+                <div className="bcon-mobile-upi-line"></div>
               </div>
               <a 
                 href="upi://pay?pa=businessconclave@sbi&pn=Business%20Conclave&cu=INR" 
-                className="w-full flex justify-center items-center py-3 rounded-md font-medium"
-                style={{ background: 'var(--success)', color: 'var(--inverse)', textDecoration: 'none', border: '1px solid var(--success)' }}
+                className="bcon-mobile-upi-btn"
               >
                 Pay with UPI App <span>↗</span>
               </a>
-              <p className="text-xs text-center mt-2" style={{ color: 'var(--muted)' }}>Mobile only - opens your UPI app</p>
+              <p className="bcon-mobile-upi-hint">Mobile only - opens your UPI app</p>
             </div>
             
             <input

@@ -520,22 +520,22 @@ function BconQuestion({
             <div className="flex gap-4 mb-6 overflow-x-auto pb-2 w-full justify-center">
               {/* Replace the src with your actual QR code image paths */}
               <div className="flex flex-col items-center shrink-0">
-                <div className="w-24 h-24 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
-                  <img src="/qr1.png" alt="QR Code 1" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
+                <div className="w-36 h-36 sm:w-40 sm:h-40 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
+                  <img src="/QR1.jpeg" alt="QR Code 1" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
                   <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 1</span>
                 </div>
                 <span className="text-[10px] mt-2 text-[var(--muted)]">SBI</span>
               </div>
               <div className="flex flex-col items-center shrink-0">
-                <div className="w-24 h-24 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
-                  <img src="/qr2.png" alt="QR Code 2" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
+                <div className="w-36 h-36 sm:w-40 sm:h-40 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
+                  <img src="/QR2.jpeg" alt="QR Code 2" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
                   <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 2</span>
                 </div>
                 <span className="text-[10px] mt-2 text-[var(--muted)]">HDFC</span>
               </div>
               <div className="flex flex-col items-center shrink-0">
-                <div className="w-24 h-24 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
-                  <img src="/qr3.png" alt="QR Code 3" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
+                <div className="w-36 h-36 sm:w-40 sm:h-40 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
+                  <img src="/QR3.jpeg" alt="QR Code 3" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
                   <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 3</span>
                 </div>
                 <span className="text-[10px] mt-2 text-[var(--muted)]">Paytm</span>

@@ -575,8 +575,13 @@ function BconQuestion({
                   
                   const fileUrl = data.url || data.fileUrl || data.link || data.webViewLink || (Object.values(data).find(v => typeof v === 'string' && v.startsWith('http'))) || "Upload successful";
                   onChange(fileUrl as string);
-                } catch (err) {
+                } catch (err: any) {
                   console.error("Upload failed", err);
+                  if (err.message && err.message.includes("Access denied: DriveApp")) {
+                    alert("Google Drive permission error. Please ensure the Apps Script is deployed with 'Execute as: Me'.");
+                  } else {
+                    alert("Upload failed. Please try again.");
+                  }
                 } finally {
                   setUploading(false);
                 }

@@ -12,7 +12,10 @@ import {
   validateQuestion,
   bconQuestionSchema,
 } from "../lib/flow";
+import { createClient } from "../utils/supabase/client";
 import "./bcon.css";
+
+const supabase = createClient();
 
 const STORAGE_KEY = "bcon-flow";
 const FORM_ID     = "bcon";
@@ -81,12 +84,23 @@ export function BconFlow() {
 
   async function submitForm(finalAnswers: AnswerMap) {
     try {
-      const res = await fetch("/api/submit", {
+      const resPromise = fetch("/api/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ formId: FORM_ID, answers: finalAnswers }),
-      });
-      await res.json().catch(() => null);
+      }).then(r => r.json()).catch(() => null);
+
+      const supabasePromise = supabase.from('registrations').insert([{
+        name: finalAnswers.name,
+        email: finalAnswers.email,
+        phone: finalAnswers.phone,
+        ticket_type: finalAnswers.ticket_type,
+        college: finalAnswers.college,
+        payment_id: finalAnswers.payment_id,
+        questions_for_speakers: finalAnswers.questions_for_speakers
+      }]);
+
+      await Promise.allSettled([resPromise, supabasePromise]);
     } catch {
       // silent — submission is fire-and-forget
     }
@@ -447,11 +461,12 @@ function BconQuestion({
   emailStatus, inputRef, direction, slide,
   onChange, onChoose, onNext, onKeyDown,
 }: BconQuestionProps) {
-  const hint = error ?? (question.id === "email"
+  const [uploading, setUploading] = useState(false);
+  const hint = uploading ? "Uploading..." : error ?? (question.id === "email"
     ? emailStatus === "checking"    ? "Checking…"
       : emailStatus === "taken"     ? "Already registered."
-        : emailStatus === "available" ? "Available ✓"
-          : "Saved automatically"
+      : emailStatus === "available" ? "Available ✓"
+      : "Saved automatically"
     : "Saved automatically");
 
   const hintClass =
@@ -499,6 +514,96 @@ function BconQuestion({
                 <span className="bcon-choice-mark">✓</span>
               </motion.button>
             ))}
+          </div>
+        ) : question.type === "file" ? (
+          <div className="bcon-file-upload">
+            <div className="flex gap-4 mb-6 overflow-x-auto pb-2 w-full justify-center">
+              {/* Replace the src with your actual QR code image paths */}
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-24 h-24 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
+                  <img src="/qr1.png" alt="QR Code 1" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
+                  <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 1</span>
+                </div>
+                <span className="text-[10px] mt-2 text-[var(--muted)]">SBI</span>
+              </div>
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-24 h-24 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
+                  <img src="/qr2.png" alt="QR Code 2" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
+                  <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 2</span>
+                </div>
+                <span className="text-[10px] mt-2 text-[var(--muted)]">HDFC</span>
+              </div>
+              <div className="flex flex-col items-center shrink-0">
+                <div className="w-24 h-24 bg-[var(--faint)] rounded-md border border-[var(--line)] flex items-center justify-center overflow-hidden">
+                  <img src="/qr3.png" alt="QR Code 3" className="w-full h-full object-cover" onError={(e) => e.currentTarget.style.display = 'none'} />
+                  <span className="text-[10px] text-[var(--muted)] absolute -z-10">QR 3</span>
+                </div>
+                <span className="text-[10px] mt-2 text-[var(--muted)]">Paytm</span>
+              </div>
+            </div>
+
+            <div className="block sm:hidden mb-6 w-full">
+              <div className="flex items-center justify-center mb-4">
+                <div className="h-px bg-[var(--line)] flex-1"></div>
+                <span className="px-4 text-[10px] uppercase text-[var(--muted)]">OR</span>
+                <div className="h-px bg-[var(--line)] flex-1"></div>
+              </div>
+              <a 
+                href="upi://pay?pa=businessconclave@sbi&pn=Business%20Conclave&cu=INR" 
+                className="w-full flex justify-center items-center py-3 rounded-md font-medium"
+                style={{ background: 'var(--success)', color: 'var(--inverse)', textDecoration: 'none', border: '1px solid var(--success)' }}
+              >
+                Pay with UPI App <span>↗</span>
+              </a>
+              <p className="text-xs text-center mt-2" style={{ color: 'var(--muted)' }}>Mobile only - opens your UPI app</p>
+            </div>
+            
+            <input
+              ref={inputRef as React.RefObject<HTMLInputElement>}
+              type="file"
+              accept="image/*"
+              className="bcon-input"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                
+                setUploading(true);
+                try {
+                  const ext = file.name.split('.').pop();
+                  const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${ext}`;
+                  
+                  const { error: uploadError } = await supabase.storage
+                    .from('payment_proofs')
+                    .upload(fileName, file);
+                    
+                  if (uploadError) throw uploadError;
+                  
+                  const { data: { publicUrl } } = supabase.storage
+                    .from('payment_proofs')
+                    .getPublicUrl(fileName);
+                    
+                  onChange(publicUrl);
+                } catch (err) {
+                  console.error("Upload failed", err);
+                } finally {
+                  setUploading(false);
+                }
+              }}
+              aria-label={question.prompt}
+              style={{ display: value ? 'none' : 'block', cursor: 'pointer', marginTop: 16 }}
+            />
+            {value && (
+              <div style={{ marginTop: 16 }}>
+                <img src={value} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, objectFit: 'contain', border: '1px solid var(--line)' }} />
+                <button 
+                  type="button" 
+                  onClick={() => onChange("")} 
+                  style={{ display: 'block', marginTop: 8, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}
+                >
+                  Remove image
+                </button>
+              </div>
+            )}
           </div>
         ) : question.multiline ? (
           <textarea

@@ -1,4 +1,4 @@
-export type QuestionType = "text" | "multipleChoice" | "email" | "textarea";
+export type QuestionType = "text" | "multipleChoice" | "email" | "textarea" | "file";
 
 export type AnswerMap = Record<string, string>;
 
@@ -96,11 +96,11 @@ export const bconQuestionSchema: Question[] = [
   },
   {
     id: "payment_id",
-    prompt: "UPI Transaction ID",
-    helper: "Enter the 12-digit UPI transaction ID for your payment. (Eg: 12345678XXXX)",
-    type: "text",
+    prompt: "UPI Transaction Screenshot",
+    helper: "Scan a QR code or use the UPI app to pay, then upload a screenshot of your receipt.",
+    type: "file",
     required: true,
-    placeholder: "e.g. 123456789012",
+    placeholder: "Upload image...",
     inputMode: "text",
     nextStep: "questions_for_speakers",
   },

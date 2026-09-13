@@ -66,10 +66,11 @@ export function BconFlow() {
       setEmailStatus("idle");
       return;
     }
-    const seq = ++emailCheckSeqRef.current;
-    setEmailStatus("checking");
-    const timer = window.setTimeout(() => { void fireEmailCheck(email, seq); }, 30);
-    return () => { window.clearTimeout(timer); emailCheckSeqRef.current += 1; };
+    // Disable email checking for now
+    // const seq = ++emailCheckSeqRef.current;
+    // setEmailStatus("checking");
+    // const timer = window.setTimeout(() => { void fireEmailCheck(email, seq); }, 30);
+    // return () => { window.clearTimeout(timer); emailCheckSeqRef.current += 1; };
   }, [question?.id, value, started, submitted]);
 
   const journeyLength = bconQuestionSchema.length;
@@ -162,23 +163,10 @@ export function BconFlow() {
       const validation = validateQuestion(question, nextValue);
       if (validation) { setError(validation); return; }
 
-      if (question.id === "email") {
-        const email = nextValue.trim().toLowerCase();
-        const seq   = emailCheckSeqRef.current;
-        const pending = fireEmailCheck(email, seq);
-        if (pending) {
-          setEmailStatus("checking");
-          const { status, error: backendError } = await pending;
-          if (status === "taken") {
-            setError("This email has already been registered for Business Conclave 2026.");
-            return;
-          }
-          if (status === "idle") {
-            setError(backendError || "Could not verify email. Please try again.");
-            return;
-          }
-        }
-      }
+      // Email checking is disabled for now
+      // if (question.id === "email") {
+      //   ... logic removed
+      // }
 
       setAnswers((prev: AnswerMap) => ({ ...prev, [question.id]: nextValue }));
       setError(null);

@@ -537,7 +537,7 @@ function BconQuestion({
                 <div className="bcon-mobile-upi-line"></div>
               </div>
               <a 
-                href="upi://pay?pa=businessconclave@sbi&pn=Business%20Conclave&cu=INR" 
+                href="upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR" 
                 className="bcon-mobile-upi-btn"
               >
                 Pay with UPI App <span>↗</span>

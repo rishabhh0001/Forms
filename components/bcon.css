@@ -716,22 +716,24 @@ textarea.bcon-input { min-height: 130px; }
 /* ── UPI Payment Layout ── */
 .bcon-qr-container {
   display: flex;
-  gap: 16px;
+  gap: clamp(8px, 2vw, 16px);
   margin-bottom: 24px;
-  overflow-x: auto;
-  padding-bottom: 8px;
   width: 100%;
   justify-content: center;
+  max-width: 480px;
+  margin-inline: auto;
 }
 .bcon-qr-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  flex-shrink: 0;
+  flex: 1;
+  min-width: 0;
 }
 .bcon-qr-box {
-  width: 144px;
-  height: 144px;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 144px;
   background: var(--bcon-faint);
   border-radius: 6px;
   border: 1px solid var(--bcon-line);
@@ -800,7 +802,6 @@ textarea.bcon-input { min-height: 130px; }
   color: var(--bcon-muted);
 }
 @media (max-width: 640px) {
-  .bcon-qr-box { width: 120px; height: 120px; }
   .bcon-mobile-upi { display: block; }
 }
 

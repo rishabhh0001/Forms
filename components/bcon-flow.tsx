@@ -49,8 +49,12 @@ export function BconFlow() {
   }, []);
 
   useEffect(() => {
+    if (submitted) {
+      window.localStorage.removeItem(STORAGE_KEY);
+      return;
+    }
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ answers, index, history, started }));
-  }, [answers, index, history, started]);
+  }, [answers, index, history, started, submitted]);
 
   useEffect(() => {
     if (!started || submitted) return;

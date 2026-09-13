@@ -450,7 +450,7 @@ function BconQuestion({
 }: BconQuestionProps) {
   const [uploading, setUploading] = useState(false);
   const hint = uploading ? "Uploading..." : error ?? (question.id === "email"
-    ? emailStatus === "checking"    ? "Checking…"
+    ? emailStatus === "checking"    ? "Checking for duplicate entries..."
       : emailStatus === "taken"     ? "Already registered."
       : emailStatus === "available" ? "Available ✓"
       : "Saved automatically"
@@ -461,6 +461,8 @@ function BconQuestion({
       ? "bcon-is-error"
       : question.id === "email" && emailStatus === "available"
         ? "bcon-is-success"
+        : question.id === "email" && emailStatus === "checking"
+        ? "bcon-is-checking"
         : "";
 
   return (

@@ -16,7 +16,6 @@ import "./bcon.css";
 
 const STORAGE_KEY = "bcon-flow";
 const FORM_ID     = "bcon";
-type EmailStatus  = "idle" | "checking" | "available" | "taken";
 
 export function BconFlow() {
   const [started, setStarted]       = useState(false);
@@ -30,11 +29,29 @@ export function BconFlow() {
   const [error, setError]         = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const reducedMotion = useReducedMotion();
-  const [emailStatus, setEmailStatus] = useState<EmailStatus>("idle");
-  const emailCheckInFlightRef = useRef<{ email: string; promise: Promise<{ status: EmailStatus; error?: string }> } | null>(null);
-  const emailCheckSeqRef = useRef(0);
   const advancingRef     = useRef(false);
   const rm = reducedMotion ?? false;
+
+  const journeyLength = bconQuestionSchema.length;
+  const currentStep  = history.length + 1;
+  const progress = useMemo(
+    () => (started ? (currentStep / journeyLength) * 100 : 0),
+    [started, currentStep, journeyLength],
+  );
+
+  async function submitForm(finalAnswers: AnswerMap) {
+    try {
+      const resPromise = fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formId: FORM_ID, answers: finalAnswers }),
+      }).then(r => r.json()).catch(() => null);
+
+      await Promise.allSettled([resPromise]);
+    } catch {
+      // silent — submission is fire-and-forget
+    }
+  }
 
   useEffect(() => {
     try {
@@ -65,81 +82,12 @@ export function BconFlow() {
   const question = started && !submitted ? getQuestionByIndex(bconQuestionSchema, index) : null;
   const value    = question ? (answers[question.id] ?? "") : "";
 
-  useEffect(() => {
-    if (!question || question.id !== "email" || !started || submitted) return;
-    const email = value.trim().toLowerCase();
-    if (!isValidEmail(email)) {
-      emailCheckSeqRef.current += 1;
-      setEmailStatus("idle");
-      return;
-    }
-    // Disable email checking for now
-    // const seq = ++emailCheckSeqRef.current;
-    // setEmailStatus("checking");
-    // const timer = window.setTimeout(() => { void fireEmailCheck(email, seq); }, 30);
-    // return () => { window.clearTimeout(timer); emailCheckSeqRef.current += 1; };
-  }, [question?.id, value, started, submitted]);
 
-  const journeyLength = bconQuestionSchema.length;
-  const currentStep  = history.length + 1;
-  const progress = useMemo(
-    () => (started ? (currentStep / journeyLength) * 100 : 0),
-    [started, currentStep, journeyLength],
-  );
-
-  async function submitForm(finalAnswers: AnswerMap) {
-    try {
-      const resPromise = fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formId: FORM_ID, answers: finalAnswers }),
-      }).then(r => r.json()).catch(() => null);
-
-      await Promise.allSettled([resPromise]);
-    } catch {
-      // silent — submission is fire-and-forget
-    }
-  }
-
-  function fireEmailCheck(email: string, seq: number): Promise<{ status: EmailStatus; error?: string }> | null {
-    if (!isValidEmail(email)) return null;
-    const existing = emailCheckInFlightRef.current;
-    if (existing && existing.email === email) return existing.promise;
-
-    let resolve!: (s: { status: EmailStatus; error?: string }) => void;
-    const promise = new Promise<{ status: EmailStatus; error?: string }>((r) => { resolve = r; });
-    const entry = { email, promise };
-    emailCheckInFlightRef.current = entry;
-
-    void fetch("/api/check-email", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, formId: FORM_ID }),
-    })
-      .then((r) => r.json().catch(() => null))
-      .then((data: { ok?: boolean; exists?: boolean; error?: string } | null) => {
-        const status: EmailStatus =
-          data?.ok && typeof data.exists === "boolean"
-            ? data.exists ? "taken" : "available"
-            : "idle";
-        if (emailCheckInFlightRef.current === entry) emailCheckInFlightRef.current = null;
-        if (seq === emailCheckSeqRef.current) setEmailStatus(status);
-        resolve({ status, error: data?.error });
-      })
-      .catch(() => {
-        if (emailCheckInFlightRef.current === entry) emailCheckInFlightRef.current = null;
-        if (seq === emailCheckSeqRef.current) setEmailStatus("idle");
-        resolve({ status: "idle", error: "Network error while checking email." });
-      });
-
-    return promise;
-  }
 
   function begin() {
     setStarted(true); setSubmitted(false); setSubmitting(false);
     setError(null);
-    setDirection(1); setEmailStatus("idle");
-    emailCheckSeqRef.current += 1;
+    setDirection(1);
   }
 
   function returnToWelcome() {
@@ -147,8 +95,7 @@ export function BconFlow() {
     window.localStorage.removeItem(STORAGE_KEY);
     setStarted(false); setSubmitted(false); setSubmitting(false);
     setIndex(startQuestionIndex); setHistory([]); setError(null);
-    setDirection(-1); setEmailStatus("idle");
-    emailCheckSeqRef.current += 1;
+    setDirection(-1);
   }
 
   useEffect(() => {
@@ -283,7 +230,6 @@ export function BconFlow() {
                   value={value}
                   answers={answers}
                   error={error}
-                  emailStatus={emailStatus}
                   inputRef={inputRef}
                   direction={direction}
                   slide={slide}
@@ -426,7 +372,6 @@ type BconQuestionProps = {
   value: string;
   answers: AnswerMap;
   error: string | null;
-  emailStatus: EmailStatus;
   inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   direction: 1 | -1;
   slide: Variants;
@@ -438,25 +383,12 @@ type BconQuestionProps = {
 
 function BconQuestion({
   question, questionNumber, value, answers, error,
-  emailStatus, inputRef, direction, slide,
+  inputRef, direction, slide,
   onChange, onChoose, onNext, onKeyDown,
 }: BconQuestionProps) {
   const [uploading, setUploading] = useState(false);
-  const hint = uploading ? "Uploading..." : error ?? (question.id === "email"
-    ? emailStatus === "checking"    ? "Checking for duplicate entries..."
-      : emailStatus === "taken"     ? "Already registered."
-      : emailStatus === "available" ? "Available ✓"
-      : "Saved automatically"
-    : "Saved automatically");
-
-  const hintClass =
-    error || (question.id === "email" && emailStatus === "taken")
-      ? "bcon-is-error"
-      : question.id === "email" && emailStatus === "available"
-        ? "bcon-is-success"
-        : question.id === "email" && emailStatus === "checking"
-        ? "bcon-is-checking"
-        : "";
+  const hint = uploading ? "Uploading..." : error ?? "Saved automatically";
+  const hintClass = error ? "bcon-is-error" : "";
 
   return (
     <motion.article

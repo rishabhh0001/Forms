@@ -77,24 +77,16 @@ export function BconFlow() {
           });
           
           let collision = false;
-          let duplicate = false;
           try {
              const data = await res.clone().json();
              if (data.status === "collision") collision = true;
-             if (data.status === "duplicate") duplicate = true;
           } catch {}
-
-          if (duplicate) {
-            throw new Error("duplicate");
-          }
 
           if ((!res.ok || collision) && currentAttempt < retries) {
             throw new Error("Retry");
           }
         } catch (err: any) {
-          if (err.message === "duplicate") {
-            throw err; // pass up to caller
-          }
+
           if (currentAttempt < retries) {
             await new Promise(r => setTimeout(r, 1000 * Math.pow(2, currentAttempt))); // exponential backoff
             await attempt(currentAttempt + 1);
@@ -196,11 +188,7 @@ export function BconFlow() {
           })
           .catch((e: any) => {
              setSubmitting(false);
-             if (e.message === "duplicate") {
-                setError("This email has already submitted a response.");
-             } else {
-                setError("Submission failed. Please check your network and try again.");
-             }
+             setError("Submission failed. Please check your network and try again.");
           });
         return;
       }

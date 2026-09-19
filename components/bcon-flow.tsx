@@ -427,6 +427,16 @@ function BconQuestion({
   const hint = uploading ? "Uploading..." : error ?? "Saved automatically";
   const hintClass = error ? "bcon-is-error" : "";
 
+  const getFirstAttendeeName = () => {
+    const val = answers["name"];
+    if (!val) return "User";
+    try {
+      const parsed = JSON.parse(val);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
+    } catch {}
+    return val;
+  };
+
   const isMultiInput = ["name", "email", "phone", "roll_number"].includes(question.id);
   let numPasses = 1;
   if (answers["ticket_type"] === "800") numPasses = 2;
@@ -498,7 +508,7 @@ function BconQuestion({
               <div className="bcon-qr-item" style={{ maxWidth: '220px', width: '100%', textAlign: 'center' }}>
                 <div className="bcon-qr-box" style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                   {(() => {
-                    const firstName = (answers["name"] || "User").trim().split(/\s+/)[0];
+                    const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
                     const amount = answers["ticket_type"] || "450";
                     const upiUri = `upi://pay?pa=8595144095@slc&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
                     const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=H&data=${encodeURIComponent(upiUri)}`;
@@ -520,7 +530,7 @@ function BconQuestion({
                 <div className="bcon-mobile-upi-line"></div>
               </div>
               {(() => {
-                const firstName = (answers["name"] || "User").trim().split(/\s+/)[0];
+                const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
                 const amount = answers["ticket_type"] || "450";
                 const upiUri = `upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
                 return (
@@ -547,7 +557,7 @@ function BconQuestion({
                 setUploading(true);
                 try {
                   const ext = file.name.split('.').pop();
-                  const safeName = (answers["name"] || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
+                  const safeName = getFirstAttendeeName().replace(/[^a-zA-Z0-9]/g, "_");
                   const filename = `${safeName}_${Date.now()}.${ext}`;
 
                   // Convert and compress file to base64
@@ -639,7 +649,7 @@ function BconQuestion({
             aria-label={question.prompt}
           />
         ) : isMultiInput && numPasses > 1 ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '45vh', overflowY: 'auto', paddingRight: '6px', paddingBottom: '4px' }}>
             {multiValues.map((v, i) => (
               <div key={i}>
                 <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>

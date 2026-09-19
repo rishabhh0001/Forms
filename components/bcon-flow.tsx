@@ -40,25 +40,54 @@ export function BconFlow() {
   );
 
   async function submitForm(finalAnswers: AnswerMap, retries = 3) {
-    const attempt = async (currentAttempt: number) => {
+    let numPasses = 1;
+    if (finalAnswers["ticket_type"] === "800") numPasses = 2;
+    if (finalAnswers["ticket_type"] === "1500") numPasses = 4;
+
+    const parseMulti = (val: string | undefined): string[] => {
+      if (!val) return [];
       try {
-        const res = await fetch("/api/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ formId: FORM_ID, answers: finalAnswers }),
-        });
-        if (!res.ok && currentAttempt < retries) {
-          throw new Error("Retry");
-        }
-      } catch (err) {
-        if (currentAttempt < retries) {
-          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, currentAttempt))); // exponential backoff
-          await attempt(currentAttempt + 1);
-        }
-      }
+        const parsed = JSON.parse(val);
+        if (Array.isArray(parsed)) return parsed;
+      } catch {}
+      return [val];
     };
-    // fire and forget with retries
-    void attempt(0);
+
+    const names = parseMulti(finalAnswers["name"]);
+    const emails = parseMulti(finalAnswers["email"]);
+    const phones = parseMulti(finalAnswers["phone"]);
+    const rollNumbers = parseMulti(finalAnswers["roll_number"]);
+
+    for (let i = 0; i < numPasses; i++) {
+      const payload = { ...finalAnswers };
+      if (numPasses > 1) {
+        payload["ticket_type"] = `${finalAnswers["ticket_type"]} - Attendee ${i + 1}`;
+        payload["name"] = names[i] || names[0] || "";
+        payload["email"] = emails[i] || emails[0] || "";
+        payload["phone"] = phones[i] || phones[0] || "";
+        payload["roll_number"] = rollNumbers[i] || rollNumbers[0] || "";
+      }
+
+      const attempt = async (currentAttempt: number) => {
+        try {
+          const res = await fetch("/api/submit", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ formId: FORM_ID, answers: payload }),
+          });
+          if (!res.ok && currentAttempt < retries) {
+            throw new Error("Retry");
+          }
+        } catch (err) {
+          if (currentAttempt < retries) {
+            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, currentAttempt))); // exponential backoff
+            await attempt(currentAttempt + 1);
+          }
+        }
+      };
+      // fire and forget with retries
+      void attempt(0);
+    }
   }
 
   useEffect(() => {
@@ -398,6 +427,32 @@ function BconQuestion({
   const hint = uploading ? "Uploading..." : error ?? "Saved automatically";
   const hintClass = error ? "bcon-is-error" : "";
 
+  const isMultiInput = ["name", "email", "phone", "roll_number"].includes(question.id);
+  let numPasses = 1;
+  if (answers["ticket_type"] === "800") numPasses = 2;
+  if (answers["ticket_type"] === "1500") numPasses = 4;
+  
+  let multiValues = [value];
+  if (isMultiInput && numPasses > 1) {
+    try {
+      const parsed = JSON.parse(value || "[]");
+      multiValues = Array.isArray(parsed) ? parsed : [];
+    } catch (e) {
+      multiValues = value ? [value] : [];
+    }
+    while (multiValues.length < numPasses) multiValues.push("");
+  }
+
+  const handleMultiChange = (index: number, newValue: string) => {
+    if (isMultiInput && numPasses > 1) {
+      const newArr = [...multiValues];
+      newArr[index] = newValue;
+      onChange(JSON.stringify(newArr));
+    } else {
+      onChange(newValue);
+    }
+  };
+
   return (
     <motion.article
       className="bcon-question"
@@ -452,7 +507,9 @@ function BconQuestion({
                     );
                   })()}
                 </div>
-                <span className="bcon-qr-label" style={{ marginTop: '12px', display: 'block', fontWeight: 600 }}>Scan to Pay</span>
+                <span className="bcon-qr-label" style={{ marginTop: '12px', display: 'block', fontWeight: 600 }}>
+                  Scan to Pay ₹{answers["ticket_type"] || "450"}
+                </span>
               </div>
             </div>
 
@@ -471,7 +528,7 @@ function BconQuestion({
                     href={upiUri}
                     className="bcon-mobile-upi-btn"
                   >
-                    Pay with UPI <span>↗</span>
+                    Pay ₹{amount} with UPI <span>↗</span>
                   </a>
                 );
               })()}
@@ -581,12 +638,32 @@ function BconQuestion({
             placeholder={question.placeholder}
             aria-label={question.prompt}
           />
+        ) : isMultiInput && numPasses > 1 ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            {multiValues.map((v, i) => (
+              <div key={i}>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--muted)', display: 'block', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Attendee {i + 1}
+                </label>
+                <input
+                  ref={i === 0 ? (inputRef as React.RefObject<HTMLInputElement>) : null}
+                  className="bcon-input"
+                  value={v}
+                  onChange={(e) => handleMultiChange(i, e.target.value)}
+                  onKeyDown={onKeyDown}
+                  placeholder={question.placeholder}
+                  inputMode={question.inputMode}
+                  aria-label={`${question.prompt} for Attendee ${i + 1}`}
+                />
+              </div>
+            ))}
+          </div>
         ) : (
           <input
             ref={inputRef as React.RefObject<HTMLInputElement>}
             className="bcon-input"
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => handleMultiChange(0, e.target.value)}
             onKeyDown={onKeyDown}
             placeholder={question.placeholder}
             inputMode={question.inputMode}

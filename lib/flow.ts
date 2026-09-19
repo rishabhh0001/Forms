@@ -269,24 +269,40 @@ export function isValidSnuEmail(value: string) {
 }
 
 export function validateQuestion(question: Question, value: string) {
-  if (!question.required) {
-    return null;
+  let valuesToValidate = [value];
+  try {
+    if (value.startsWith("[") && value.endsWith("]")) {
+      const parsed = JSON.parse(value);
+      if (Array.isArray(parsed)) {
+        valuesToValidate = parsed;
+      }
+    }
+  } catch (e) {
+    // Ignore parse errors, treat as a single string
   }
 
-  const trimmedValue = value.trim();
+  for (let i = 0; i < valuesToValidate.length; i++) {
+    const val = valuesToValidate[i] || "";
+    const trimmedValue = val.trim();
 
-  if (!trimmedValue) {
-    return "This question needs an answer before you can continue.";
-  }
+    if (question.required && !trimmedValue) {
+      if (valuesToValidate.length > 1) return `Attendee ${i + 1}: This question needs an answer.`;
+      return "This question needs an answer before you can continue.";
+    }
 
-  if (question.type === "email" && !isValidEmail(trimmedValue)) {
-    return "Enter a valid email address (e.g. you@example.com).";
-  }
+    if (!question.required && !trimmedValue) continue;
 
-  if (question.inputMode === "tel" || question.id === "phone") {
-    const digits = trimmedValue.replace(/\D/g, "");
-    if (digits.length !== 10) {
-      return "Enter a valid 10-digit mobile number.";
+    if (question.type === "email" && !isValidEmail(trimmedValue)) {
+      if (valuesToValidate.length > 1) return `Attendee ${i + 1}: Enter a valid email address.`;
+      return "Enter a valid email address (e.g. you@example.com).";
+    }
+
+    if (question.inputMode === "tel" || question.id === "phone") {
+      const digits = trimmedValue.replace(/\D/g, "");
+      if (digits.length !== 10) {
+        if (valuesToValidate.length > 1) return `Attendee ${i + 1}: Enter a valid 10-digit mobile number.`;
+        return "Enter a valid 10-digit mobile number.";
+      }
     }
   }
 

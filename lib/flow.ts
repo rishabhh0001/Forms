@@ -34,15 +34,19 @@ export const bconQuestionSchema: Question[] = [
     required: true,
     options: [
       {
-        label: "Conference",
-        description: "Standard access to the Business Conclave.",
-        value: "conference",
+        label: "1 Pass",
+        description: "Standard access for 1 person (₹450)",
+        value: "450",
       },
       {
-        label: "DJ Night (Opening soon)",
-        description: "Access to the DJ Night.",
-        value: "dj_night",
-        disabled: true,
+        label: "2 Passes",
+        description: "Group access for 2 people (₹800)",
+        value: "800",
+      },
+      {
+        label: "4 Passes",
+        description: "Group access for 4 people (₹1500)",
+        value: "1500",
       },
     ],
     nextStep: "name",

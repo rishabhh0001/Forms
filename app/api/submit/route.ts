@@ -95,6 +95,11 @@ export async function POST(request: Request) {
       console.error("[submit] Row collision detected — Apps Script refused to overwrite:", data);
     }
 
+    if (data.ok === false) {
+      console.error("[submit] Upstream reported an error:", data.error);
+      return NextResponse.json(data, { status: 400 });
+    }
+
     return NextResponse.json(data, { status: 200 });
   } catch (err) {
     console.error("[submit] Unexpected error:", err);

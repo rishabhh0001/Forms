@@ -77,18 +77,29 @@ export function BconFlow() {
           });
           
           let collision = false;
+          let duplicate = false;
           try {
              const data = await res.clone().json();
              if (data.status === "collision") collision = true;
+             if (data.status === "duplicate") duplicate = true;
           } catch {}
+
+          if (duplicate) {
+            throw new Error("duplicate");
+          }
 
           if ((!res.ok || collision) && currentAttempt < retries) {
             throw new Error("Retry");
           }
-        } catch (err) {
+        } catch (err: any) {
+          if (err.message === "duplicate") {
+            throw err; // pass up to caller
+          }
           if (currentAttempt < retries) {
             await new Promise(r => setTimeout(r, 1000 * Math.pow(2, currentAttempt))); // exponential backoff
             await attempt(currentAttempt + 1);
+          } else {
+            throw err;
           }
         }
       };
@@ -179,8 +190,18 @@ export function BconFlow() {
           y: rect.top + rect.height / 2 - window.innerHeight / 2,
         });
         setSubmitting(true);
-        void submitForm({ ...answers, [question.id]: nextValue });
-        window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, rm ? 0 : 2200);
+        submitForm({ ...answers, [question.id]: nextValue })
+          .then(() => {
+             window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, rm ? 0 : 2200);
+          })
+          .catch((e: any) => {
+             setSubmitting(false);
+             if (e.message === "duplicate") {
+                setError("This email has already submitted a response.");
+             } else {
+                setError("Submission failed. Please check your network and try again.");
+             }
+          });
         return;
       }
       setHistory((prev: number[]) => [...prev, index]);
@@ -229,7 +250,13 @@ export function BconFlow() {
     exit: (d: number) => ({ opacity: 0, y: d > 0 ? -30 : 30, scale: 0.98, rotateX: d > 0 ? -2 : 2, filter: "blur(6px)", transition: { duration: rm ? 0 : 0.2, ease: "easeIn" } }),
   };
 
-  const userEmail = answers["email"] ?? "";
+  let userEmail = answers["email"] ?? "";
+  try {
+    const parsed = JSON.parse(userEmail);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      userEmail = parsed[0];
+    }
+  } catch {}
 
   return (
     <main className="bcon-shell">

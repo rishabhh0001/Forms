@@ -72,7 +72,7 @@ export const bconQuestionSchema: Question[] = [
     helper: "Enter a valid mobile number.",
     type: "text",
     required: true,
-    placeholder: "e.g. +91 98765 43210",
+    placeholder: "e.g. +91 88268 54528",
     inputMode: "tel",
     nextStep: "roll_number",
   },

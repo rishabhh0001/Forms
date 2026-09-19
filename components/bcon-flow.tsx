@@ -62,8 +62,8 @@ export function BconFlow() {
       const payload = { ...finalAnswers };
       if (numPasses > 1) {
         payload["ticket_type"] = `${finalAnswers["ticket_type"]} - Attendee ${i + 1}`;
-        payload["name"] = names[i] || names[0] || "";
-        payload["email"] = emails[i] || emails[0] || "";
+        payload["name"] = i === 0 ? (names[0] || "") : `${names[i] || ""} (Email: ${emails[i] || ""})`;
+        payload["email"] = i === 0 ? (emails[0] || "") : "bcon-noreply@snu.edu.in";
         payload["phone"] = phones[i] || phones[0] || "";
         payload["roll_number"] = rollNumbers[i] || rollNumbers[0] || "";
       }
@@ -75,7 +75,14 @@ export function BconFlow() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ formId: FORM_ID, answers: payload }),
           });
-          if (!res.ok && currentAttempt < retries) {
+          
+          let collision = false;
+          try {
+             const data = await res.clone().json();
+             if (data.status === "collision") collision = true;
+          } catch {}
+
+          if ((!res.ok || collision) && currentAttempt < retries) {
             throw new Error("Retry");
           }
         } catch (err) {
@@ -85,8 +92,12 @@ export function BconFlow() {
           }
         }
       };
-      // fire and forget with retries
-      void attempt(0);
+      
+      // Await each submission with a small 1s stagger to prevent Apps Script row collisions
+      await attempt(0);
+      if (i < numPasses - 1) {
+        await new Promise(r => setTimeout(r, 1200));
+      }
     }
   }
 

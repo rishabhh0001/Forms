@@ -281,6 +281,17 @@ export function validateQuestion(question: Question, value: string) {
     // Ignore parse errors, treat as a single string
   }
 
+  if (question.type === "email" && valuesToValidate.length > 1) {
+    const emailSet = new Set();
+    for (let i = 0; i < valuesToValidate.length; i++) {
+      const email = valuesToValidate[i].trim().toLowerCase();
+      if (email && emailSet.has(email)) {
+        return `Attendee ${i + 1}: This email is already used by another attendee. Please use unique emails.`;
+      }
+      emailSet.add(email);
+    }
+  }
+
   for (let i = 0; i < valuesToValidate.length; i++) {
     const val = valuesToValidate[i] || "";
     const trimmedValue = val.trim();

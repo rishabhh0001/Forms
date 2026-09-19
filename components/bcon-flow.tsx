@@ -77,13 +77,16 @@ export function BconFlow() {
           });
           
           let collision = false;
+          let errorMessage = "Unknown server error";
           try {
              const data = await res.clone().json();
              if (data.status === "collision") collision = true;
+             if (data.error) errorMessage = data.error;
           } catch {}
 
-          if ((!res.ok || collision) && currentAttempt < retries) {
-            throw new Error("Retry");
+          if (!res.ok || collision) {
+            if (currentAttempt < retries) throw new Error("Retry");
+            else throw new Error(errorMessage);
           }
         } catch (err: any) {
 
@@ -188,7 +191,7 @@ export function BconFlow() {
           })
           .catch((e: any) => {
              setSubmitting(false);
-             setError("Submission failed. Please check your network and try again.");
+             setError(`Submission failed: ${e.message || "Unknown error"}. Please contact rj910@snu.edu.in with this ss`);
           });
         return;
       }

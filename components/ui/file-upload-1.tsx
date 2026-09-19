@@ -31,7 +31,7 @@ export default function FileUpload05() {
           </div>
         </div>
         <p className="mt-2 flex items-center justify-between text-xs leading-5 text-muted-foreground">
-          Recommended max. size: 10 MB, Accepted file types: XLSX, XLS, CSV.
+          Recommended max. size: 10 MB, Accepted file types: JPG, JPEG, PNG.
         </p>
         <div className="relative mt-8 rounded-lg bg-muted p-3">
           <div className="absolute right-1 top-1">

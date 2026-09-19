@@ -172,20 +172,30 @@
 .bcon-back-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  border: 0;
-  background: transparent;
-  color: var(--bcon-muted);
-  padding: 7px 0;
-  font: 9px/1 "Cinzel", serif;
+  gap: 8px;
+  border: 1px solid rgba(207, 175, 137, 0.4);
+  background: rgba(45, 17, 71, 0.4);
+  border-radius: 8px;
+  color: var(--bcon-gold);
+  padding: 10px 18px;
+  font: 600 12px/1 "Cinzel", serif;
   letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;
-  transition: color 0.2s;
+  transition: all 0.3s ease;
 }
-.bcon-back-btn:hover { color: var(--bcon-ink); }
-.bcon-back-btn:disabled { visibility: hidden; }
-.bcon-back-btn span { font-size: 9px; }
+.bcon-back-btn:hover {
+  background: rgba(45, 17, 71, 0.8);
+  border-color: var(--bcon-gold);
+  color: var(--bcon-white);
+  transform: translateX(-4px);
+  box-shadow: 0 4px 12px rgba(186, 39, 206, 0.3);
+}
+.bcon-back-btn:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+.bcon-back-btn span { font-size: 12px; }
 
 .bcon-progress-wrap { height: 2px; background: rgba(255,255,255,0.06); }
 .bcon-progress-line {
@@ -452,8 +462,8 @@ textarea.bcon-input { min-height: 130px; }
 }
 .bcon-validation {
   color: var(--bcon-muted);
-  font: 9px/1.4 "Cinzel", serif;
-  letter-spacing: 0.07em;
+  font: 500 13px/1.4 "Montserrat", sans-serif;
+  letter-spacing: 0.05em;
 }
 .bcon-is-error { color: var(--bcon-danger); }
 .bcon-is-success { color: var(--bcon-success); }
@@ -658,7 +668,6 @@ textarea.bcon-input { min-height: 130px; }
   .bcon-shell { padding: 0; }
   .bcon-stage { height: 100dvh; border: 0; }
   .bcon-header { padding-left: 16px; padding-right: 16px; }
-  .bcon-back-btn span { display: none; }
   .bcon-content { padding: 26px 20px; }
   .bcon-intro-hero { flex-direction: column; gap: 0.5rem; text-align: center; }
   .bcon-intro-text-col { align-items: center; }

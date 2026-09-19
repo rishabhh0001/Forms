@@ -15,25 +15,25 @@ import {
 import "./bcon.css";
 
 const STORAGE_KEY = "bcon-flow";
-const FORM_ID     = "bcon";
+const FORM_ID = "bcon";
 
 export function BconFlow() {
-  const [started, setStarted]       = useState(false);
-  const [submitted, setSubmitted]   = useState(false);
+  const [started, setStarted] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitOrigin, setSubmitOrigin] = useState({ x: 0, y: 150 });
-  const [answers, setAnswers]   = useState<AnswerMap>({});
-  const [index, setIndex]       = useState(startQuestionIndex);
-  const [history, setHistory]   = useState<number[]>([]);
+  const [answers, setAnswers] = useState<AnswerMap>({});
+  const [index, setIndex] = useState(startQuestionIndex);
+  const [history, setHistory] = useState<number[]>([]);
   const [direction, setDirection] = useState<1 | -1>(1);
-  const [error, setError]         = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const reducedMotion = useReducedMotion();
-  const advancingRef     = useRef(false);
+  const advancingRef = useRef(false);
   const rm = reducedMotion ?? false;
 
   const journeyLength = bconQuestionSchema.length;
-  const currentStep  = history.length + 1;
+  const currentStep = history.length + 1;
   const progress = useMemo(
     () => (started ? (currentStep / journeyLength) * 100 : 0),
     [started, currentStep, journeyLength],
@@ -80,7 +80,7 @@ export function BconFlow() {
   }, [started, submitted, index]);
 
   const question = started && !submitted ? getQuestionByIndex(bconQuestionSchema, index) : null;
-  const value    = question ? (answers[question.id] ?? "") : "";
+  const value = question ? (answers[question.id] ?? "") : "";
 
 
 
@@ -124,11 +124,11 @@ export function BconFlow() {
       setError(null);
       const nextIndex = resolveNextQuestionIndex(bconQuestionSchema, index, nextValue, answers);
       if (nextIndex === null) {
-        const btn  = document.querySelector<HTMLElement>("[data-submit-button]");
+        const btn = document.querySelector<HTMLElement>("[data-submit-button]");
         const rect = btn?.getBoundingClientRect();
         if (rect) setSubmitOrigin({
           x: rect.left + rect.width / 2 - window.innerWidth / 2,
-          y: rect.top  + rect.height / 2 - window.innerHeight / 2,
+          y: rect.top + rect.height / 2 - window.innerHeight / 2,
         });
         setSubmitting(true);
         void submitForm({ ...answers, [question.id]: nextValue });
@@ -161,7 +161,7 @@ export function BconFlow() {
     const onKey = (e: globalThis.KeyboardEvent) => {
       if (!question || question.type !== "multipleChoice") return;
       const idx = /^[1-9]$/.test(e.key) ? Number(e.key) - 1 : -1;
-      const ch  = question.options?.[idx];
+      const ch = question.options?.[idx];
       if (ch) { e.preventDefault(); choose(ch.value); }
       if (e.key === "Escape") back();
     };
@@ -178,7 +178,7 @@ export function BconFlow() {
   const slide: Variants = {
     initial: (d: number) => ({ opacity: 0, y: d > 0 ? 50 : -50, scale: 0.96, rotateX: d > 0 ? 4 : -4, filter: "blur(12px)" }),
     animate: { opacity: 1, y: 0, scale: 1, rotateX: 0, filter: "blur(0px)", transition: pageMotion },
-    exit:    (d: number) => ({ opacity: 0, y: d > 0 ? -30 : 30, scale: 0.98, rotateX: d > 0 ? -2 : 2, filter: "blur(6px)", transition: { duration: rm ? 0 : 0.2, ease: "easeIn" } }),
+    exit: (d: number) => ({ opacity: 0, y: d > 0 ? -30 : 30, scale: 0.98, rotateX: d > 0 ? -2 : 2, filter: "blur(6px)", transition: { duration: rm ? 0 : 0.2, ease: "easeIn" } }),
   };
 
   const userEmail = answers["email"] ?? "";
@@ -275,24 +275,24 @@ function Logo2026({ rm }: { rm: boolean }) {
       aria-hidden="true"
       style={{ position: "relative", display: "flex", justifyContent: "center" }}
     >
-      <div 
-        className="bcon-logo-glow" 
-        style={{ 
-          opacity: 0.8, 
+      <div
+        className="bcon-logo-glow"
+        style={{
+          opacity: 0.8,
           background: "radial-gradient(circle, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0) 65%)",
           transform: "scale(1.5)"
-        }} 
+        }}
       />
-      <motion.img 
-        src="/bcon-logo.png" 
-        alt="2026" 
-        style={{ 
-          position: "relative", 
-          zIndex: 2, 
-          display: "block", 
-          width: "auto", 
+      <motion.img
+        src="/bcon-logo.png"
+        alt="2026"
+        style={{
+          position: "relative",
+          zIndex: 2,
+          display: "block",
+          width: "auto",
           height: "clamp(48px, 7.9vw, 97px)",
-          maxHeight: "100%", 
+          maxHeight: "100%",
           objectFit: "contain",
           transform: "translateY(-4px)"
         }}
@@ -431,45 +431,31 @@ function BconQuestion({
           </div>
         ) : question.type === "file" ? (
           <div className="bcon-file-upload">
-            <div className="bcon-qr-container">
-              <div className="bcon-qr-item">
+            <div className="bcon-qr-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+              <div className="bcon-qr-item" style={{ maxWidth: '220px', width: '100%' }}>
                 <div className="bcon-qr-box">
-                  <img src="/QR1.jpeg" alt="QR Code 1" onError={(e) => e.currentTarget.style.display = 'none'} />
-                  <span className="bcon-qr-fallback">QR 1</span>
+                  <img src="/QRArsh.jpeg" alt="Payment QR Code" onError={(e) => e.currentTarget.style.display = 'none'} />
+                  <span className="bcon-qr-fallback">QR Code</span>
                 </div>
-                <span className="bcon-qr-label">SBI</span>
-              </div>
-              <div className="bcon-qr-item">
-                <div className="bcon-qr-box">
-                  <img src="/QR2.jpeg" alt="QR Code 2" onError={(e) => e.currentTarget.style.display = 'none'} />
-                  <span className="bcon-qr-fallback">QR 2</span>
-                </div>
-                <span className="bcon-qr-label">HDFC</span>
-              </div>
-              <div className="bcon-qr-item">
-                <div className="bcon-qr-box">
-                  <img src="/QR3.jpeg" alt="QR Code 3" onError={(e) => e.currentTarget.style.display = 'none'} />
-                  <span className="bcon-qr-fallback">QR 3</span>
-                </div>
-                <span className="bcon-qr-label">Paytm</span>
+                <span className="bcon-qr-label">Arsh Baruah</span>
               </div>
             </div>
 
             <div className="bcon-mobile-upi">
               <div className="bcon-mobile-upi-divider">
                 <div className="bcon-mobile-upi-line"></div>
-                <span className="bcon-mobile-upi-text">OR</span>
+                <span className="bcon-mobile-upi-text">QR</span>
                 <div className="bcon-mobile-upi-line"></div>
               </div>
-              <a 
-                href="upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR" 
+              <a
+                href="upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR"
                 className="bcon-mobile-upi-btn"
               >
-                Pay with UPI App <span>↗</span>
+                Pay with UPI <span>↗</span>
               </a>
-              <p className="bcon-mobile-upi-hint">Mobile only - opens your UPI app</p>
+              <p className="bcon-mobile-upi-hint">Mobile only - opens your chosen UPI app</p>
             </div>
-            
+
             <input
               ref={inputRef as React.RefObject<HTMLInputElement>}
               type="file"
@@ -478,13 +464,13 @@ function BconQuestion({
               onChange={async (e) => {
                 const file = e.target.files?.[0];
                 if (!file) return;
-                
+
                 setUploading(true);
                 try {
                   const ext = file.name.split('.').pop();
                   const safeName = (answers["name"] || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
                   const filename = `${safeName}_${Date.now()}.${ext}`;
-                  
+
                   // Convert file to base64
                   const base64 = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
@@ -495,7 +481,7 @@ function BconQuestion({
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
                   });
-                  
+
                   const res = await fetch("/api/upload", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -505,10 +491,10 @@ function BconQuestion({
                       base64,
                     }),
                   });
-                  
+
                   const data = await res.json();
                   if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
-                  
+
                   const fileUrl = data.url || data.fileUrl || data.link || data.webViewLink || (Object.values(data).find(v => typeof v === 'string' && v.startsWith('http'))) || "Upload successful";
                   onChange(fileUrl as string);
                 } catch (err: any) {
@@ -528,12 +514,12 @@ function BconQuestion({
             {value && (
               <div style={{ marginTop: 16 }}>
                 <img src={value} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, objectFit: 'contain', border: '1px solid var(--line)' }} />
-                <button 
-                  type="button" 
-                  onClick={() => onChange("")} 
+                <button
+                  type="button"
+                  onClick={() => onChange("")}
                   style={{ display: 'block', marginTop: 8, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}
                 >
-                  Remove image
+                  Remove image (Preview might not render properly don&apos;t worry about it.)
                 </button>
               </div>
             )}

@@ -461,7 +461,7 @@ function BconQuestion({
             <div className="bcon-mobile-upi">
               <div className="bcon-mobile-upi-divider">
                 <div className="bcon-mobile-upi-line"></div>
-                <span className="bcon-mobile-upi-text">OR</span>
+                <span className="bcon-mobile-upi-text">QR</span>
                 <div className="bcon-mobile-upi-line"></div>
               </div>
               {(() => {

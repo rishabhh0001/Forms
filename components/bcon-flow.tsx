@@ -444,13 +444,10 @@ function BconQuestion({
                 <div className="bcon-qr-box" style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
                   {(() => {
                     const firstName = (answers["name"] || "User").trim().split(/\s+/)[0];
-                    const upiUri = `upi://pay?pa=8595144095@slc&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26`;
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&data=${encodeURIComponent(upiUri)}`;
+                    const upiUri = `upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26`;
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=H&data=${encodeURIComponent(upiUri)}`;
                     return (
-                      <>
-                        <img src={qrUrl} alt="Payment QR Code" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '8px' }} onError={(e) => e.currentTarget.style.display = 'none'} />
-                        <img src="/bcon-logo.png" alt="Logo" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px' }} />
-                      </>
+                      <img src={qrUrl} alt="Payment QR Code" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '8px' }} onError={(e) => e.currentTarget.style.display = 'none'} />
                     );
                   })()}
                 </div>

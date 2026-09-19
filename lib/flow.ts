@@ -281,8 +281,8 @@ export function validateQuestion(question: Question, value: string) {
 
   if (question.inputMode === "tel" || question.id === "phone") {
     const digits = trimmedValue.replace(/\D/g, "");
-    if (digits.length < 10 || digits.length > 15) {
-      return "Enter a valid mobile number with 10 to 15 digits.";
+    if (digits.length !== 10) {
+      return "Enter a valid 10-digit mobile number.";
     }
   }
 

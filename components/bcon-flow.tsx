@@ -449,7 +449,7 @@ function BconQuestion({
                     return (
                       <>
                         <img src={qrUrl} alt="Payment QR Code" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '8px' }} onError={(e) => e.currentTarget.style.display = 'none'} />
-                        <img src="/bcon-logo.png" alt="Logo" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px', background: '#fff', padding: '4px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+                        <img src="/bcon-logo.png" alt="Logo" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px' }} />
                       </>
                     );
                   })()}

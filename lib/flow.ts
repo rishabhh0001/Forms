@@ -279,5 +279,12 @@ export function validateQuestion(question: Question, value: string) {
     return "Enter a valid email address (e.g. you@example.com).";
   }
 
+  if (question.inputMode === "tel" || question.id === "phone") {
+    const digits = trimmedValue.replace(/\D/g, "");
+    if (digits.length < 10 || digits.length > 15) {
+      return "Enter a valid mobile number with 10 to 15 digits.";
+    }
+  }
+
   return null;
 }

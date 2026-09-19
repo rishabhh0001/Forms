@@ -440,27 +440,42 @@ function BconQuestion({
         ) : question.type === "file" ? (
           <div className="bcon-file-upload">
             <div className="bcon-qr-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div className="bcon-qr-item" style={{ maxWidth: '220px', width: '100%' }}>
-                <div className="bcon-qr-box">
-                  <img src="/QRArsh.jpeg" alt="Payment QR Code" onError={(e) => e.currentTarget.style.display = 'none'} />
-                  <span className="bcon-qr-fallback">QR Code</span>
+              <div className="bcon-qr-item" style={{ maxWidth: '220px', width: '100%', textAlign: 'center' }}>
+                <div className="bcon-qr-box" style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+                  {(() => {
+                    const firstName = (answers["name"] || "User").trim().split(/\s+/)[0];
+                    const upiUri = `upi://pay?pa=8595144095@slc&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26`;
+                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&data=${encodeURIComponent(upiUri)}`;
+                    return (
+                      <>
+                        <img src={qrUrl} alt="Payment QR Code" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '8px' }} onError={(e) => e.currentTarget.style.display = 'none'} />
+                        <img src="/bcon-logo.png" alt="Logo" style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '48px', height: '48px', background: '#fff', padding: '4px', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+                      </>
+                    );
+                  })()}
                 </div>
-                <span className="bcon-qr-label">Arsh Baruah</span>
+                <span className="bcon-qr-label" style={{ marginTop: '12px', display: 'block', fontWeight: 600 }}>Scan to Pay</span>
               </div>
             </div>
 
             <div className="bcon-mobile-upi">
               <div className="bcon-mobile-upi-divider">
                 <div className="bcon-mobile-upi-line"></div>
-                <span className="bcon-mobile-upi-text">QR</span>
+                <span className="bcon-mobile-upi-text">OR</span>
                 <div className="bcon-mobile-upi-line"></div>
               </div>
-              <a
-                href="upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR"
-                className="bcon-mobile-upi-btn"
-              >
-                Pay with UPI <span>↗</span>
-              </a>
+              {(() => {
+                const firstName = (answers["name"] || "User").trim().split(/\s+/)[0];
+                const upiUri = `upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26`;
+                return (
+                  <a
+                    href={upiUri}
+                    className="bcon-mobile-upi-btn"
+                  >
+                    Pay with UPI <span>↗</span>
+                  </a>
+                );
+              })()}
               <p className="bcon-mobile-upi-hint">Mobile only - opens your chosen UPI app</p>
             </div>
 

@@ -28,7 +28,17 @@ export async function POST(request: Request) {
       body: JSON.stringify({ filename, mimeType, base64 }),
     });
 
-    const data = await upstream.json();
+    const text = await upstream.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      console.error("[upload] Failed to parse upstream response as JSON. Received text:", text.slice(0, 200));
+      return NextResponse.json(
+        { ok: false, error: "Received invalid response from Google Drive integration" }, 
+        { status: 502 }
+      );
+    }
 
     if (!upstream.ok || !data.ok) {
       return NextResponse.json(

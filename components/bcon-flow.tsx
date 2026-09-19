@@ -39,18 +39,26 @@ export function BconFlow() {
     [started, currentStep, journeyLength],
   );
 
-  async function submitForm(finalAnswers: AnswerMap) {
-    try {
-      const resPromise = fetch("/api/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ formId: FORM_ID, answers: finalAnswers }),
-      }).then(r => r.json()).catch(() => null);
-
-      await Promise.allSettled([resPromise]);
-    } catch {
-      // silent — submission is fire-and-forget
-    }
+  async function submitForm(finalAnswers: AnswerMap, retries = 3) {
+    const attempt = async (currentAttempt: number) => {
+      try {
+        const res = await fetch("/api/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ formId: FORM_ID, answers: finalAnswers }),
+        });
+        if (!res.ok && currentAttempt < retries) {
+          throw new Error("Retry");
+        }
+      } catch (err) {
+        if (currentAttempt < retries) {
+          await new Promise(r => setTimeout(r, 1000 * Math.pow(2, currentAttempt))); // exponential backoff
+          await attempt(currentAttempt + 1);
+        }
+      }
+    };
+    // fire and forget with retries
+    void attempt(0);
   }
 
   useEffect(() => {
@@ -471,12 +479,37 @@ function BconQuestion({
                   const safeName = (answers["name"] || "unknown").replace(/[^a-zA-Z0-9]/g, "_");
                   const filename = `${safeName}_${Date.now()}.${ext}`;
 
-                  // Convert file to base64
+                  // Convert and compress file to base64
                   const base64 = await new Promise<string>((resolve, reject) => {
                     const reader = new FileReader();
-                    reader.onload = () => {
-                      const result = reader.result as string;
-                      resolve(result.split(',')[1]);
+                    reader.onload = (e) => {
+                      const img = new Image();
+                      img.onload = () => {
+                        const canvas = document.createElement("canvas");
+                        const maxWidth = 1200;
+                        let { width, height } = img;
+
+                        if (width > maxWidth) {
+                          height = Math.round((height * maxWidth) / width);
+                          width = maxWidth;
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+
+                        const ctx = canvas.getContext("2d");
+                        if (!ctx) {
+                          resolve((e.target?.result as string).split(",")[1]);
+                          return;
+                        }
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Use JPEG compression to reduce size and handle heavy traffic easily
+                        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+                        resolve(dataUrl.split(",")[1]);
+                      };
+                      img.onerror = reject;
+                      img.src = e.target?.result as string;
                     };
                     reader.onerror = reject;
                     reader.readAsDataURL(file);
@@ -500,9 +533,9 @@ function BconQuestion({
                 } catch (err: any) {
                   console.error("Upload failed", err);
                   if (err.message && err.message.includes("Access denied: DriveApp")) {
-                    alert("Google Drive permission error. Please ensure the Apps Script is deployed with 'Execute as: Me'.");
+                    alert("Drive uplink permissions error. Please contact rj910@snu.edu.in with a screenshot of this message.");
                   } else {
-                    alert("Upload failed. Please try again.");
+                    alert("Upload failed. Please try again within a few seconds.");
                   }
                 } finally {
                   setUploading(false);

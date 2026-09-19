@@ -314,15 +314,15 @@ export default function LandingPage() {
             <span className="lp-card-cta">Open Form ↗</span>
           </Link>
 
-          <Link href="/test" className="lp-card" id="lp-test-card">
-            <span className="lp-card-tag lp-card-tag-muted">Test</span>
+          <div className="lp-card" style={{ opacity: 0.5, cursor: 'not-allowed' }} id="lp-test-card">
+            <span className="lp-card-tag lp-card-tag-muted">Test (Disabled)</span>
             <div className="lp-test-icon" aria-hidden="true">⚡</div>
             <p className="lp-card-title">Dummy Form</p>
             <p className="lp-card-desc">
               A multi-step form for exploring the flow engine, branching logic, and Google Sheets integration.
             </p>
-            <span className="lp-card-cta lp-card-cta-test">Open Form ↗</span>
-          </Link>
+            <span className="lp-card-cta lp-card-cta-test">Temporarily Disabled</span>
+          </div>
         </div>
 
         <footer className="lp-footer">

@@ -24,6 +24,7 @@ export default function FileUpload05() {
                   id="file-upload-4"
                   name="file-upload-4"
                   type="file"
+                  accept="image/*"
                   className="sr-only"
                 />
               </Label>
@@ -31,7 +32,7 @@ export default function FileUpload05() {
           </div>
         </div>
         <p className="mt-2 flex items-center justify-between text-xs leading-5 text-muted-foreground">
-          Recommended max. size: 10 MB, Accepted file types: JPG, JPEG, PNG.
+          Recommended max. size: 10 MB, Accepted file types: JPG, JPEG, PNG, GIF, WEBP.
         </p>
         <div className="relative mt-8 rounded-lg bg-muted p-3">
           <div className="absolute right-1 top-1">

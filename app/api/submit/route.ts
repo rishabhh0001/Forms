@@ -1,20 +1,8 @@
 import { NextResponse } from "next/server";
+import { submitRateLimit, getClientIp } from "@/lib/rate-limit";
 
 /**
  * POST /api/submit
- *
- * Proxies form answers to the Google Apps Script Web App which writes them
- * into Google Sheets (one tab per form, controlled by formId).
- *
- * Body schema:
- *   {
- *     formId:  "bcon" | "test" | ""    (optional — used to pick the sheet tab)
- *     answers: { goal, name, email, … }
- *   }
- *
- * Env vars:
- *   GOOGLE_SHEETS_WEB_APP_URL   — deployed Apps Script /exec URL (required)
- *   GOOGLE_SHEETS_TOKEN         — shared secret matching the Apps Script (required)
  */
 
 export const runtime = "nodejs";
@@ -25,7 +13,11 @@ const SHARED_TOKEN = process.env.GOOGLE_SHEETS_TOKEN;
 
 export async function POST(request: Request) {
   try {
-    // 1. Parse body.
+    const ip = getClientIp(request);
+    if (!submitRateLimit.check(ip)) {
+      return NextResponse.json({ ok: false, error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": "900" } });
+    }
+
     let body: { formId?: unknown; answers?: unknown };
     try {
       body = await request.json();
@@ -35,14 +27,22 @@ export async function POST(request: Request) {
 
     const answers = body.answers;
     if (!answers || typeof answers !== "object" || Array.isArray(answers)) {
-      return NextResponse.json(
-        { ok: false, error: "Missing or invalid 'answers' object." },
-        { status: 400 },
-      );
+      return NextResponse.json({ ok: false, error: "Missing or invalid 'answers' object." }, { status: 400 });
     }
 
-    // formId is optional; defaults to "" (maps to the default sheet tab).
-    const formId = typeof body.formId === "string" ? body.formId.trim() : "";
+    // Limit number of answers to prevent memory exhaustion
+    if (Object.keys(answers).length > 50) {
+      return NextResponse.json({ ok: false, error: "Too many answer fields." }, { status: 400 });
+    }
+
+    // Validate each answer string length
+    for (const [key, val] of Object.entries(answers)) {
+      if (typeof val !== "string" || val.length > 5000) {
+        return NextResponse.json({ ok: false, error: `Invalid or excessively long value for field ${key}` }, { status: 400 });
+      }
+    }
+
+    const formId = typeof body.formId === "string" ? body.formId.trim().slice(0, 50) : "";
 
     // 2. Server must be configured.
     if (!WEB_APP_URL || !SHARED_TOKEN) {
@@ -57,18 +57,33 @@ export async function POST(request: Request) {
     }
 
     // 3. Forward to Apps Script, including formId so it writes to the right tab.
-    let upstream: Response;
-    try {
-      upstream = await fetch(WEB_APP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: SHARED_TOKEN, formId, answers }),
-        cache: "no-store",
-      });
-    } catch (err) {
-      console.error("[submit] Network error reaching Apps Script:", err);
+    const maxRetries = 3;
+    let upstream: Response | null = null;
+    let lastErr: any;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        upstream = await fetch(WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: SHARED_TOKEN, formId, answers }),
+          cache: "no-store",
+        });
+        if (upstream.ok || upstream.status < 500) {
+          break;
+        }
+      } catch (err: any) {
+        lastErr = err;
+        console.error(`[submit] Network error reaching Apps Script on attempt ${i + 1}:`, err.message);
+        if (i < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+        }
+      }
+    }
+
+    if (!upstream) {
       return NextResponse.json(
-        { ok: false, error: "Could not reach the Google Apps Script Web App. Check that the URL is correct and the deployment is live." },
+        { ok: false, error: `Could not reach the Google Apps Script Web App after ${maxRetries} attempts. Last error: ${lastErr?.message}` },
         { status: 502 },
       );
     }

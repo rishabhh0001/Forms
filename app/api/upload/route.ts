@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { uploadRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -7,11 +8,28 @@ const DRIVE_WEB_APP_URL = process.env.GOOGLE_DRIVE_WEB_APP_URL;
 
 export async function POST(request: Request) {
   try {
+    const ip = getClientIp(request);
+    if (!uploadRateLimit.check(ip)) {
+      return NextResponse.json({ ok: false, error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": "900" } });
+    }
+
     const body = await request.json();
     const { filename, mimeType, base64 } = body;
 
     if (!filename || !mimeType || !base64) {
       return NextResponse.json({ ok: false, error: "Missing required fields" }, { status: 400 });
+    }
+
+    if (typeof filename !== "string" || filename.length > 200 || !/^[a-zA-Z0-9_\-\.]+$/.test(filename)) {
+      return NextResponse.json({ ok: false, error: "Invalid filename" }, { status: 400 });
+    }
+
+    if (typeof mimeType !== "string" || !["image/jpeg", "image/png", "image/webp"].includes(mimeType)) {
+      return NextResponse.json({ ok: false, error: "Invalid or unsupported file type" }, { status: 400 });
+    }
+
+    if (typeof base64 !== "string" || base64.length > 5 * 1024 * 1024) { // ~5MB base64 limit
+      return NextResponse.json({ ok: false, error: "File too large. Maximum size is ~3.5MB." }, { status: 413 });
     }
 
     if (!DRIVE_WEB_APP_URL) {
@@ -22,11 +40,32 @@ export async function POST(request: Request) {
       );
     }
 
-    const upstream = await fetch(DRIVE_WEB_APP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ filename, mimeType, base64 }),
-    });
+    const maxRetries = 3;
+    let upstream: Response | null = null;
+    let lastErr: any;
+
+    for (let i = 0; i < maxRetries; i++) {
+      try {
+        upstream = await fetch(DRIVE_WEB_APP_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ filename, mimeType, base64 }),
+        });
+        if (upstream.ok || upstream.status < 500) {
+          break; // Stop retrying if successful or a client error (4xx) occurs
+        }
+      } catch (e: any) {
+        lastErr = e;
+        console.error(`[upload] Fetch attempt ${i + 1} failed:`, e.message);
+        if (i < maxRetries - 1) {
+          await new Promise(r => setTimeout(r, 1500 * (i + 1))); // Exponential backoff
+        }
+      }
+    }
+
+    if (!upstream) {
+      throw new Error(`Failed to reach Google Drive after ${maxRetries} attempts. Last error: ${lastErr?.message}`);
+    }
 
     const text = await upstream.text();
     let data;

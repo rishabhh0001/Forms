@@ -12,6 +12,7 @@ import {
   validateQuestion,
   bconQuestionSchema,
 } from "../lib/flow";
+import UploadIcon from "./icons/upload-icon";
 import "./bcon.css";
 
 const STORAGE_KEY = "bcon-flow";
@@ -30,7 +31,7 @@ export function BconFlow() {
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const reducedMotion = useReducedMotion();
   const advancingRef = useRef(false);
-  const rm = reducedMotion ?? false;
+  const rm = false; // Override reduced motion to ensure animations play
 
   const journeyLength = bconQuestionSchema.length;
   const currentStep = history.length + 1;
@@ -49,7 +50,7 @@ export function BconFlow() {
       try {
         const parsed = JSON.parse(val);
         if (Array.isArray(parsed)) return parsed;
-      } catch {}
+      } catch { }
       return [val];
     };
 
@@ -75,14 +76,14 @@ export function BconFlow() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ formId: FORM_ID, answers: payload }),
           });
-          
+
           let collision = false;
           let errorMessage = "Unknown server error";
           try {
-             const data = await res.clone().json();
-             if (data.status === "collision") collision = true;
-             if (data.error) errorMessage = data.error;
-          } catch {}
+            const data = await res.clone().json();
+            if (data.status === "collision") collision = true;
+            if (data.error) errorMessage = data.error;
+          } catch { }
 
           if (!res.ok || collision) {
             if (currentAttempt < retries) throw new Error("Retry");
@@ -98,7 +99,7 @@ export function BconFlow() {
           }
         }
       };
-      
+
       // Await each submission with a small 1s stagger to prevent Apps Script row collisions
       await attempt(0);
       if (i < numPasses - 1) {
@@ -187,11 +188,11 @@ export function BconFlow() {
         setSubmitting(true);
         submitForm({ ...answers, [question.id]: nextValue })
           .then(() => {
-             window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, rm ? 0 : 2200);
+            window.setTimeout(() => { setSubmitting(false); setSubmitted(true); }, rm ? 0 : 2200);
           })
           .catch((e: any) => {
-             setSubmitting(false);
-             setError(`Submission failed: ${e.message || "Unknown error"}. Please contact rj910@snu.edu.in with this ss`);
+            setSubmitting(false);
+            setError(`Submission failed: ${e.message || "Unknown error"}. Please contact rj910@snu.edu.in with this ss`);
           });
         return;
       }
@@ -247,7 +248,7 @@ export function BconFlow() {
     if (Array.isArray(parsed) && parsed.length > 0) {
       userEmail = parsed[0];
     }
-  } catch {}
+  } catch { }
 
   return (
     <main className="bcon-shell">
@@ -284,7 +285,7 @@ export function BconFlow() {
 
         <div className="bcon-content">
           <AnimatePresence mode="wait" custom={direction}>
-            {!started
+            {!started && !submitted
               ? <BconIntro key="intro" onBegin={begin} rm={rm} />
               : null}
             {question
@@ -327,6 +328,19 @@ export function BconFlow() {
           </span>
         </footer>
       </section>
+
+      {process.env.NODE_ENV === "development" && (
+        <button
+          onClick={() => {
+            setSubmitOrigin({ x: 0, y: 0 });
+            setSubmitting(true);
+            setTimeout(() => { setSubmitting(false); setSubmitted(true); }, 3000);
+          }}
+          style={{ position: "fixed", bottom: 20, right: 20, zIndex: 9999, padding: "8px 12px", background: "#222", color: "white", borderRadius: "6px", fontSize: "12px", cursor: "pointer", border: "1px solid #444", fontWeight: 600 }}
+        >
+          Test Anim
+        </button>
+      )}
     </main>
   );
 }
@@ -462,7 +476,7 @@ function BconQuestion({
     try {
       const parsed = JSON.parse(val);
       if (Array.isArray(parsed) && parsed.length > 0) return parsed[0];
-    } catch {}
+    } catch { }
     return val;
   };
 
@@ -470,7 +484,7 @@ function BconQuestion({
   let numPasses = 1;
   if (answers["ticket_type"] === "800") numPasses = 2;
   if (answers["ticket_type"] === "1500") numPasses = 4;
-  
+
   let multiValues = [value];
   if (isMultiInput && numPasses > 1) {
     try {
@@ -532,141 +546,15 @@ function BconQuestion({
             ))}
           </div>
         ) : question.type === "file" ? (
-          <div className="bcon-file-upload">
-            <div className="bcon-qr-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
-              <div className="bcon-qr-item" style={{ maxWidth: '220px', width: '100%', textAlign: 'center' }}>
-                <div className="bcon-qr-box" style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
-                  {(() => {
-                    const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
-                    const amount = answers["ticket_type"] || "450";
-                    const upiUri = `upi://pay?pa=8595144095@slc&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
-                    const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=H&data=${encodeURIComponent(upiUri)}`;
-                    return (
-                      <img src={qrUrl} alt="Payment QR Code" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '8px' }} onError={(e) => e.currentTarget.style.display = 'none'} />
-                    );
-                  })()}
-                </div>
-                <span className="bcon-qr-label" style={{ marginTop: '12px', display: 'block', fontWeight: 600 }}>
-                  Scan to Pay ₹{answers["ticket_type"] || "450"}
-                </span>
-              </div>
-            </div>
-
-            <div className="bcon-mobile-upi">
-              <div className="bcon-mobile-upi-divider">
-                <div className="bcon-mobile-upi-line"></div>
-                <span className="bcon-mobile-upi-text">QR</span>
-                <div className="bcon-mobile-upi-line"></div>
-              </div>
-              {(() => {
-                const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
-                const amount = answers["ticket_type"] || "450";
-                const upiUri = `upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
-                return (
-                  <a
-                    href={upiUri}
-                    className="bcon-mobile-upi-btn"
-                  >
-                    Pay ₹{amount} with UPI <span>↗</span>
-                  </a>
-                );
-              })()}
-              <p className="bcon-mobile-upi-hint">Mobile only - opens your chosen UPI app</p>
-            </div>
-
-            <input
-              ref={inputRef as React.RefObject<HTMLInputElement>}
-              type="file"
-              accept="image/*"
-              className="bcon-input"
-              onChange={async (e) => {
-                const file = e.target.files?.[0];
-                if (!file) return;
-
-                setUploading(true);
-                try {
-                  const ext = file.name.split('.').pop();
-                  const safeName = getFirstAttendeeName().replace(/[^a-zA-Z0-9]/g, "_");
-                  const filename = `${safeName}_${Date.now()}.${ext}`;
-
-                  // Convert and compress file to base64
-                  const base64 = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                      const img = new Image();
-                      img.onload = () => {
-                        const canvas = document.createElement("canvas");
-                        const maxWidth = 1200;
-                        let { width, height } = img;
-
-                        if (width > maxWidth) {
-                          height = Math.round((height * maxWidth) / width);
-                          width = maxWidth;
-                        }
-
-                        canvas.width = width;
-                        canvas.height = height;
-
-                        const ctx = canvas.getContext("2d");
-                        if (!ctx) {
-                          resolve((e.target?.result as string).split(",")[1]);
-                          return;
-                        }
-                        ctx.drawImage(img, 0, 0, width, height);
-
-                        // Use JPEG compression to reduce size and handle heavy traffic easily
-                        const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-                        resolve(dataUrl.split(",")[1]);
-                      };
-                      img.onerror = reject;
-                      img.src = e.target?.result as string;
-                    };
-                    reader.onerror = reject;
-                    reader.readAsDataURL(file);
-                  });
-
-                  const res = await fetch("/api/upload", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                      filename,
-                      mimeType: file.type,
-                      base64,
-                    }),
-                  });
-
-                  const data = await res.json();
-                  if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
-
-                  const fileUrl = data.url || data.fileUrl || data.link || data.webViewLink || (Object.values(data).find(v => typeof v === 'string' && v.startsWith('http'))) || "Upload successful";
-                  onChange(fileUrl as string);
-                } catch (err: any) {
-                  console.error("Upload failed", err);
-                  if (err.message && err.message.includes("Access denied: DriveApp")) {
-                    alert("Drive uplink permissions error. Please contact rj910@snu.edu.in with a screenshot of this message.");
-                  } else {
-                    alert("Upload failed. Please try again within a few seconds.");
-                  }
-                } finally {
-                  setUploading(false);
-                }
-              }}
-              aria-label={question.prompt}
-              style={{ display: value ? 'none' : 'block', cursor: 'pointer', marginTop: 16 }}
-            />
-            {value && (
-              <div style={{ marginTop: 16 }}>
-                <img src={value} alt="Preview" style={{ maxWidth: '100%', maxHeight: 200, borderRadius: 8, objectFit: 'contain', border: '1px solid var(--line)' }} />
-                <button
-                  type="button"
-                  onClick={() => onChange("")}
-                  style={{ display: 'block', marginTop: 8, color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 13, textDecoration: 'underline' }}
-                >
-                  Remove image (Preview might not render properly don&apos;t worry about it.)
-                </button>
-              </div>
-            )}
-          </div>
+          <BconFileUpload
+            question={question}
+            value={value}
+            answers={answers}
+            getFirstAttendeeName={getFirstAttendeeName}
+            uploading={uploading}
+            setUploading={setUploading}
+            onChange={onChange}
+          />
         ) : question.multiline ? (
           <textarea
             ref={inputRef as React.RefObject<HTMLTextAreaElement>}
@@ -729,6 +617,459 @@ function BconQuestion({
   );
 }
 
+type BconFileUploadProps = {
+  question: NonNullable<ReturnType<typeof getQuestionByIndex>>;
+  value: string;
+  answers: AnswerMap;
+  getFirstAttendeeName: () => string;
+  uploading: boolean;
+  setUploading: (v: boolean) => void;
+  onChange: (v: string) => void;
+};
+
+function BconFileUpload({
+  question, value, answers, getFirstAttendeeName,
+  uploading, setUploading, onChange,
+}: BconFileUploadProps) {
+  const [dragOver, setDragOver] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadState, setUploadState] = useState<"idle" | "uploading" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
+  const [fileName, setFileName] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const progressRef = useRef<number | null>(null);
+
+  // Reset state when value is cleared
+  useEffect(() => {
+    if (!value && uploadState === "success") {
+      setUploadState("idle");
+      setUploadProgress(0);
+      setFileName("");
+    }
+  }, [value, uploadState]);
+
+  // Fake progress animation during upload
+  const startFakeProgress = () => {
+    setUploadProgress(0);
+    let current = 0;
+    const tick = () => {
+      current += Math.random() * 12 + 3;
+      if (current > 88) current = 88 + Math.random() * 2;
+      if (current >= 90) { current = 90; return; }
+      setUploadProgress(Math.min(current, 90));
+      progressRef.current = window.requestAnimationFrame(() => {
+        window.setTimeout(tick, 120 + Math.random() * 180);
+      });
+    };
+    tick();
+  };
+
+  const stopFakeProgress = (success: boolean) => {
+    if (progressRef.current) {
+      window.cancelAnimationFrame(progressRef.current);
+      progressRef.current = null;
+    }
+    if (success) {
+      setUploadProgress(100);
+    }
+  };
+
+  const handleFiles = async (file: File) => {
+    setFileName(file.name);
+    setUploadState("uploading");
+    setErrorMsg("");
+    setUploading(true);
+    startFakeProgress();
+
+    try {
+      const ext = file.name.split('.').pop();
+      const safeName = getFirstAttendeeName().replace(/[^a-zA-Z0-9]/g, "_");
+      const filename = `${safeName}_${Date.now()}.${ext}`;
+
+      // Convert and compress file to base64
+      const base64 = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            const maxWidth = 1200;
+            let { width, height } = img;
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              resolve((ev.target?.result as string).split(",")[1]);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
+            resolve(dataUrl.split(",")[1]);
+          };
+          img.onerror = reject;
+          img.src = ev.target?.result as string;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const res = await fetch("/api/upload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename, mimeType: file.type, base64 }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.ok) throw new Error(data.error || "Upload failed");
+
+      const fileUrl = data.url || data.fileUrl || data.link || data.webViewLink
+        || (Object.values(data).find(v => typeof v === 'string' && v.startsWith('http')))
+        || "Upload successful";
+
+      stopFakeProgress(true);
+      await new Promise(r => setTimeout(r, 400));
+      setUploadState("success");
+      onChange(fileUrl as string);
+    } catch (err: any) {
+      console.error("Upload failed", err);
+      stopFakeProgress(false);
+      setUploadState("error");
+      if (err.message?.includes("Access denied: DriveApp")) {
+        setErrorMsg("Drive permissions error. Contact rj910@snu.edu.in");
+      } else {
+        setErrorMsg(err.message || "Upload failed. Please try again.");
+      }
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith("image/")) handleFiles(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+  };
+
+  const circleR = 38;
+  const circleC = 2 * Math.PI * circleR;
+  const dashOffset = circleC - (uploadProgress / 100) * circleC;
+
+  return (
+    <div className="bcon-file-upload">
+      {/* QR Code Section */}
+      <div className="bcon-qr-container" style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+        <div className="bcon-qr-item" style={{ maxWidth: '220px', width: '100%', textAlign: 'center' }}>
+          <div className="bcon-qr-box" style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+            {(() => {
+              const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
+              const amount = answers["ticket_type"] || "450";
+              const upiUri = `upi://pay?pa=8595144095@slc&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
+              const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=H&data=${encodeURIComponent(upiUri)}`;
+              return (
+                <img src={qrUrl} alt="Payment QR Code" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '8px' }} onError={(e) => e.currentTarget.style.display = 'none'} />
+              );
+            })()}
+          </div>
+          <span className="bcon-qr-label" style={{ marginTop: '12px', display: 'block', fontWeight: 600 }}>
+            Scan to Pay ₹{answers["ticket_type"] || "450"}
+          </span>
+        </div>
+      </div>
+
+      {/* Mobile UPI */}
+      <div className="bcon-mobile-upi">
+        <div className="bcon-mobile-upi-divider">
+          <div className="bcon-mobile-upi-line" />
+          <span className="bcon-mobile-upi-text">QR</span>
+          <div className="bcon-mobile-upi-line" />
+        </div>
+        {(() => {
+          const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
+          const amount = answers["ticket_type"] || "450";
+          const upiUri = `upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
+          return (
+            <a href={upiUri} className="bcon-mobile-upi-btn">
+              Pay ₹{amount} with UPI <span>↗</span>
+            </a>
+          );
+        })()}
+        <p className="bcon-mobile-upi-hint">Mobile only - opens your chosen UPI app</p>
+      </div>
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="bcon-upload-hidden-input"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleFiles(file);
+        }}
+        aria-label={question.prompt}
+      />
+
+      {/* Animated Upload Zone */}
+      <AnimatePresence mode="wait">
+        {value && uploadState === "success" ? (
+          /* ── Success State ── */
+          <motion.div
+            key="upload-success"
+            className="bcon-upload-zone bcon-upload-success"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          >
+            <div className="bcon-upload-success-inner">
+              <motion.div
+                className="bcon-upload-check-wrap"
+                initial={{ scale: 0, rotate: -45 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 200, damping: 12, delay: 0.1 }}
+              >
+                <svg className="bcon-upload-check-svg" viewBox="0 0 52 52" fill="none">
+                  <motion.circle
+                    cx="26" cy="26" r="24"
+                    stroke="var(--bcon-success)"
+                    strokeWidth="2.5"
+                    fill="none"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  />
+                  <motion.path
+                    d="M15 26.5L22 33.5L37 18.5"
+                    stroke="var(--bcon-success)"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    fill="none"
+                    initial={{ pathLength: 0 }}
+                    animate={{ pathLength: 1 }}
+                    transition={{ duration: 0.35, delay: 0.35, ease: "easeOut" }}
+                  />
+                </svg>
+                {/* Success particles */}
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <motion.span
+                    key={i}
+                    className="bcon-upload-particle"
+                    initial={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+                    animate={{
+                      opacity: 0,
+                      scale: 0,
+                      x: Math.cos((Math.PI * 2 * i) / 6) * 40,
+                      y: Math.sin((Math.PI * 2 * i) / 6) * 40,
+                    }}
+                    transition={{ duration: 0.6, delay: 0.3 + i * 0.04, ease: "easeOut" }}
+                  />
+                ))}
+              </motion.div>
+              <motion.p
+                className="bcon-upload-label"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+              >
+                Screenshot uploaded!
+              </motion.p>
+              <motion.p
+                className="bcon-upload-filename"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.6 }}
+                transition={{ delay: 0.6 }}
+              >
+                {fileName || "Payment proof received"}
+              </motion.p>
+              <motion.button
+                type="button"
+                className="bcon-upload-remove-btn"
+                onClick={() => { onChange(""); setUploadState("idle"); setFileName(""); }}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14" />
+                </svg>
+                Replace screenshot
+              </motion.button>
+            </div>
+          </motion.div>
+        ) : uploadState === "uploading" ? (
+          /* ── Upload Progress State ── */
+          <motion.div
+            key="upload-progress"
+            className="bcon-upload-zone bcon-upload-uploading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="bcon-upload-progress-inner">
+              <div className="bcon-upload-ring-wrap">
+                <svg className="bcon-upload-ring-svg" viewBox="0 0 88 88">
+                  {/* Background track */}
+                  <circle
+                    cx="44" cy="44" r={circleR}
+                    fill="none"
+                    stroke="rgba(255,255,255,0.06)"
+                    strokeWidth="4"
+                  />
+                  {/* Progress arc */}
+                  <motion.circle
+                    cx="44" cy="44" r={circleR}
+                    fill="none"
+                    stroke="url(#uploadGradient)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeDasharray={circleC}
+                    strokeDashoffset={dashOffset}
+                    transform="rotate(-90 44 44)"
+                    style={{ transition: "stroke-dashoffset 0.3s ease" }}
+                  />
+                  <defs>
+                    <linearGradient id="uploadGradient" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="var(--bcon-magenta)" />
+                      <stop offset="50%" stopColor="var(--bcon-violet)" />
+                      <stop offset="100%" stopColor="var(--bcon-gold)" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+                {/* Percentage text */}
+                <span className="bcon-upload-ring-pct">{Math.round(uploadProgress)}%</span>
+                {/* Orbiting dot */}
+                <motion.div
+                  className="bcon-upload-orbit-dot"
+                  animate={{ rotate: 360 }}
+                  transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
+                />
+              </div>
+              <motion.p
+                className="bcon-upload-label"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+              >
+                Uploading screenshot…
+              </motion.p>
+              <p className="bcon-upload-filename" style={{ opacity: 0.5 }}>{fileName}</p>
+            </div>
+          </motion.div>
+        ) : uploadState === "error" ? (
+          /* ── Error State ── */
+          <motion.div
+            key="upload-error"
+            className="bcon-upload-zone bcon-upload-error"
+            initial={{ opacity: 0, x: 0 }}
+            animate={{ opacity: 1, x: [0, -8, 8, -6, 6, -3, 3, 0] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            onClick={() => fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+          >
+            <div className="bcon-upload-error-inner">
+              <svg className="bcon-upload-error-icon" viewBox="0 0 48 48" fill="none">
+                <circle cx="24" cy="24" r="22" stroke="var(--bcon-danger)" strokeWidth="2.5" fill="none" opacity="0.3" />
+                <path d="M16 16L32 32M32 16L16 32" stroke="var(--bcon-danger)" strokeWidth="2.5" strokeLinecap="round" />
+              </svg>
+              <p className="bcon-upload-label" style={{ color: "var(--bcon-danger)" }}>Upload failed</p>
+              <p className="bcon-upload-error-msg">{errorMsg}</p>
+              <motion.button
+                type="button"
+                className="bcon-upload-retry-btn"
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                  <path d="M1 4v6h6M23 20v-6h-6" />
+                  <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
+                </svg>
+                Try again
+              </motion.button>
+            </div>
+          </motion.div>
+        ) : (
+          /* ── Idle / Drop Zone ── */
+          <motion.div
+            key="upload-idle"
+            className={`bcon-upload-zone bcon-upload-idle ${dragOver ? "bcon-upload-dragover" : ""}`}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -12 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            onDrop={handleDrop}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onClick={() => fileInputRef.current?.click()}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => e.key === "Enter" && fileInputRef.current?.click()}
+            aria-label="Upload payment screenshot"
+          >
+            <div className="bcon-upload-idle-inner">
+              <motion.div
+                className="bcon-upload-icon-wrap"
+                animate={dragOver ? { scale: 1.15, y: -4 } : { scale: 1, y: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 15 }}
+              >
+                <UploadIcon
+                  size={32}
+                  color="url(#cloudGrad)"
+                  className="bcon-upload-cloud-svg"
+                />
+                <svg width="0" height="0">
+                  <defs>
+                    <linearGradient id="cloudGrad" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0%" stopColor="var(--bcon-magenta)" />
+                      <stop offset="50%" stopColor="var(--bcon-violet)" />
+                      <stop offset="100%" stopColor="var(--bcon-mauve)" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              </motion.div>
+
+              <motion.div
+                style={{ display: "flex", flexDirection: "row", gap: "6px", alignItems: "baseline", flexWrap: "wrap", justifyContent: "center" }}
+                initial={{ opacity: 0, y: 4 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <p className="bcon-upload-label" style={{ margin: 0 }}>
+                  {dragOver ? "Drop it here" : "Drop screenshot here"}
+                </p>
+                <p className="bcon-upload-sublabel" style={{ margin: 0 }}>
+                  or click to browse <span style={{ opacity: 0.6, marginLeft: "4px" }}>• PNG, JPG, WEBP</span>
+                </p>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 function BconSubmitTransition({ origin, rm }: { origin: { x: number; y: number }; rm: boolean }) {
   const dots = Array.from({ length: 10 }, (_, i) => {
     const angle = (Math.PI * 2 * i) / 10;
@@ -744,7 +1085,7 @@ function BconSubmitTransition({ origin, rm }: { origin: { x: number; y: number }
       <motion.div className="bcon-submit-pod" initial={{ x: origin.x, y: origin.y, scale: 1, opacity: 1 }} animate={{ x: 0, y: 0, scale: 0.18, opacity: 0 }} transition={{ duration: rm ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] }}>
         Submit <b>↵</b>
       </motion.div>
-      <motion.div className="bcon-dot-field" animate={rm ? {} : { rotate: 360 }} transition={{ delay: 0.5, duration: 2.4, ease: "linear" }}>
+      <motion.div className="bcon-dot-field" initial={{ rotate: 0 }} animate={rm ? {} : { rotate: 360 }} transition={{ duration: 3, ease: "linear", repeat: Infinity }}>
         {dots.map((dot, i) => (
           <motion.span key={i} className="bcon-travel-dot" initial={{ x: origin.x, y: origin.y, scale: 0, opacity: 0 }} animate={{ x: [origin.x, 0, dot.x], y: [origin.y, 0, dot.y], scale: [0, 1.25, 0.62], opacity: [0, 1, 1] }} transition={{ duration: rm ? 0 : 0.9, delay: dot.delay, ease: [0.16, 1, 0.3, 1], times: [0, 0.52, 1] }} />
         ))}

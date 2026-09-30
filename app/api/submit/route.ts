@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
     if (!submitRateLimit.check(ip)) {
-      return NextResponse.json({ ok: false, error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": "900" } });
+      return NextResponse.json({ ok: false, error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": "60" } });
     }
 
     let body: { formId?: unknown; answers?: unknown };

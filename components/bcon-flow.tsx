@@ -42,8 +42,8 @@ export function BconFlow() {
 
   async function submitForm(finalAnswers: AnswerMap, retries = 3) {
     let numPasses = 1;
-    if (finalAnswers["ticket_type"] === "800") numPasses = 2;
-    if (finalAnswers["ticket_type"] === "1500") numPasses = 4;
+    if (finalAnswers["ticket_type"] === "899") numPasses = 2;
+    if (finalAnswers["ticket_type"] === "1599") numPasses = 4;
 
     const parseMulti = (val: string | undefined): string[] => {
       if (!val) return [];
@@ -482,8 +482,8 @@ function BconQuestion({
 
   const isMultiInput = ["name", "email", "phone", "roll_number"].includes(question.id);
   let numPasses = 1;
-  if (answers["ticket_type"] === "800") numPasses = 2;
-  if (answers["ticket_type"] === "1500") numPasses = 4;
+  if (answers["ticket_type"] === "899") numPasses = 2;
+  if (answers["ticket_type"] === "1599") numPasses = 4;
 
   let multiValues = [value];
   if (isMultiInput && numPasses > 1) {
@@ -777,7 +777,7 @@ function BconFileUpload({
           <div className="bcon-qr-box" style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
             {(() => {
               const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
-              const amount = answers["ticket_type"] || "450";
+              const amount = answers["ticket_type"] || "499";
               const upiUri = `upi://pay?pa=8595144095@slc&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
               const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=H&data=${encodeURIComponent(upiUri)}`;
               return (
@@ -786,7 +786,7 @@ function BconFileUpload({
             })()}
           </div>
           <span className="bcon-qr-label" style={{ marginTop: '12px', display: 'block', fontWeight: 600 }}>
-            Scan to Pay ₹{answers["ticket_type"] || "450"}
+            Scan to Pay ₹{answers["ticket_type"] || "499"}
           </span>
         </div>
       </div>
@@ -800,7 +800,7 @@ function BconFileUpload({
         </div>
         {(() => {
           const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
-          const amount = answers["ticket_type"] || "450";
+          const amount = answers["ticket_type"] || "499";
           const upiUri = `upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
           return (
             <a href={upiUri} className="bcon-mobile-upi-btn">

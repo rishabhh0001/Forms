@@ -35,18 +35,18 @@ export const bconQuestionSchema: Question[] = [
     options: [
       {
         label: "1 Pass",
-        description: "Standard access for 1 person (₹450)",
-        value: "450",
+        description: "Standard access for 1 person (₹499)",
+        value: "499",
       },
       {
         label: "2 Passes",
-        description: "Group access for 2 people (₹800)",
-        value: "800",
+        description: "Group access for 2 people (₹899)",
+        value: "899",
       },
       {
         label: "4 Passes",
-        description: "Group access for 4 people (₹1500)",
-        value: "1500",
+        description: "Group access for 4 people (₹1599)",
+        value: "1599",
       },
     ],
     nextStep: "name",

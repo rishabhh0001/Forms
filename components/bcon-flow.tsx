@@ -111,6 +111,13 @@ export function BconFlow() {
   useEffect(() => {
     try {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
+      
+      // Prevent old cached data ("conference" or "dj_night") from being submitted
+      if (saved.answers && (saved.answers["ticket_type"] === "conference" || saved.answers["ticket_type"] === "dj_night")) {
+        window.localStorage.removeItem(STORAGE_KEY);
+        return;
+      }
+      
       if (saved.answers && Object.keys(saved.answers).length > 0) setAnswers(saved.answers);
       if (saved.index !== undefined) setIndex(saved.index);
       if (saved.history) setHistory(saved.history);

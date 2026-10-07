@@ -61,8 +61,8 @@ export default function LandingPage() {
 
       <nav className="hp-nav" aria-label="Main">
         <Link href="/" className="hp-brand" aria-label="Forms home">
-          <span className="hp-brand-mark">RJ</span>
-          <span className="hp-brand-name">Forms</span>
+          <Image src="/bcon.png" alt="Business Conclave Logo" width={28} height={28} style={{ objectFit: 'contain', filter: 'brightness(0) invert(1)' }} />
+          <span className="hp-brand-name">Business Conclave</span>
         </Link>
         <div className="hp-nav-links">
           <a href="#passes">Passes</a>
@@ -157,7 +157,7 @@ export default function LandingPage() {
             <div className="hp-event-art">
               <span className="hp-event-ring" aria-hidden="true" />
               <span className="hp-event-ring hp-event-ring-2" aria-hidden="true" />
-              <Image src="/bcon-logo.png" alt="Business Conclave 2026 logo" width={220} height={120} className="hp-event-logo" priority />
+              <Image src="/bcon.png" alt="Business Conclave 2026 logo" width={220} height={120} className="hp-event-logo" priority />
             </div>
           </Link>
         </section>

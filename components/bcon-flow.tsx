@@ -160,7 +160,7 @@ export function BconFlow() {
     try {
       const nextValue = answer ?? value;
       const validation = validateQuestion(question, nextValue);
-      if (validation) { setError(validation); return; }
+      if (validation) { setError(validation); advancingRef.current = false; return; }
 
       // Email checking is disabled for now
       // if (question.id === "email") {

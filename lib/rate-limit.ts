@@ -31,11 +31,11 @@ export class RateLimiter {
   }
 }
 
-// Upload: 10 requests per 1 minute
-export const uploadRateLimit = new RateLimiter(10, 60 * 1000);
+// Upload: 200 requests per 1 minute
+export const uploadRateLimit = new RateLimiter(200, 60 * 1000);
 
-// Submit: 15 requests per 1 minute
-export const submitRateLimit = new RateLimiter(15, 60 * 1000);
+// Submit: 200 requests per 1 minute
+export const submitRateLimit = new RateLimiter(200, 60 * 1000);
 
 export function getClientIp(req: Request): string {
   const forwarded = req.headers.get("x-forwarded-for");

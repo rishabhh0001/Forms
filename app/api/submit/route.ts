@@ -7,6 +7,7 @@ import { submitRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const WEB_APP_URL  = process.env.GOOGLE_SHEETS_WEB_APP_URL;
 const SHARED_TOKEN = process.env.GOOGLE_SHEETS_TOKEN;
@@ -71,6 +72,8 @@ export async function POST(request: Request) {
         });
         if (upstream.ok || upstream.status < 500) {
           break;
+        } else {
+          throw new Error(`Upstream returned ${upstream.status}`);
         }
       } catch (err: any) {
         lastErr = err;

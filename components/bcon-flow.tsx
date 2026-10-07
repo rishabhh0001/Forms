@@ -69,39 +69,23 @@ export function BconFlow() {
         payload["roll_number"] = rollNumbers[i] || rollNumbers[0] || "";
       }
 
-      const attempt = async (currentAttempt: number) => {
-        try {
-          const res = await fetch("/api/submit", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ formId: FORM_ID, answers: payload }),
-          });
+      const res = await fetch("/api/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ formId: FORM_ID, answers: payload }),
+      });
 
-          let collision = false;
-          let errorMessage = "Unknown server error";
-          try {
-            const data = await res.clone().json();
-            if (data.status === "collision") collision = true;
-            if (data.error) errorMessage = data.error;
-          } catch { }
+      let collision = false;
+      let errorMessage = "Unknown server error";
+      try {
+        const data = await res.json();
+        if (data.status === "collision") collision = true;
+        if (data.error) errorMessage = data.error;
+      } catch { }
 
-          if (!res.ok || collision) {
-            if (currentAttempt < retries) throw new Error("Retry");
-            else throw new Error(errorMessage);
-          }
-        } catch (err: any) {
-
-          if (currentAttempt < retries) {
-            await new Promise(r => setTimeout(r, 1000 * Math.pow(2, currentAttempt))); // exponential backoff
-            await attempt(currentAttempt + 1);
-          } else {
-            throw err;
-          }
-        }
-      };
-
-      // Await each submission with a small 1s stagger to prevent Apps Script row collisions
-      await attempt(0);
+      if (!res.ok || collision) {
+        throw new Error(errorMessage);
+      }
       if (i < numPasses - 1) {
         await new Promise(r => setTimeout(r, 1200));
       }
@@ -111,13 +95,13 @@ export function BconFlow() {
   useEffect(() => {
     try {
       const saved = JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "{}");
-      
+
       // Prevent old cached data ("conference" or "dj_night") from being submitted
       if (saved.answers && (saved.answers["ticket_type"] === "conference" || saved.answers["ticket_type"] === "dj_night")) {
         window.localStorage.removeItem(STORAGE_KEY);
         return;
       }
-      
+
       if (saved.answers && Object.keys(saved.answers).length > 0) setAnswers(saved.answers);
       if (saved.index !== undefined) setIndex(saved.index);
       if (saved.history) setHistory(saved.history);
@@ -158,6 +142,7 @@ export function BconFlow() {
     setStarted(false); setSubmitted(false); setSubmitting(false);
     setIndex(startQuestionIndex); setHistory([]); setError(null);
     setDirection(-1);
+    advancingRef.current = false;
   }
 
   useEffect(() => {
@@ -199,13 +184,15 @@ export function BconFlow() {
           })
           .catch((e: any) => {
             setSubmitting(false);
-            setError(`Submission failed: ${e.message || "Unknown error"}. Please contact rj910@snu.edu.in with this ss`);
+            setError(`Submission failed: ${e.message || "Unknown error"}. Please contact rj910@snu.edu.in with this screenshot.`);
+            advancingRef.current = false;
           });
-        return;
+        return; // Do not reset advancingRef.current here so it prevents further submissions
       }
       setHistory((prev: number[]) => [...prev, index]);
       setDirection(1); setIndex(nextIndex);
-    } finally {
+      advancingRef.current = false;
+    } catch {
       advancingRef.current = false;
     }
   }

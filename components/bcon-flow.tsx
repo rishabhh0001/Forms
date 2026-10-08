@@ -677,9 +677,9 @@ function BconFileUpload({
     startFakeProgress();
 
     try {
-      const ext = file.name.split('.').pop();
       const safeName = getFirstAttendeeName().replace(/[^a-zA-Z0-9]/g, "_");
-      const filename = `${safeName}_${Date.now()}.${ext}`;
+      // Force .jpg extension because we compress it to image/jpeg on the canvas
+      const filename = `${safeName}_${Date.now()}.jpg`;
 
       // Convert and compress file to base64
       const base64 = await new Promise<string>((resolve, reject) => {
@@ -698,7 +698,9 @@ function BconFileUpload({
             canvas.height = height;
             const ctx = canvas.getContext("2d");
             if (!ctx) {
-              resolve((ev.target?.result as string).split(",")[1]);
+              // If canvas fails, we fall back to original file, but we should handle the prefix correctly
+              const result = ev.target?.result as string;
+              resolve(result.includes(",") ? result.split(",")[1] : result);
               return;
             }
             ctx.drawImage(img, 0, 0, width, height);
@@ -715,7 +717,7 @@ function BconFileUpload({
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename, mimeType: file.type, base64 }),
+        body: JSON.stringify({ filename, mimeType: "image/jpeg", base64 }),
       });
 
       const data = await res.json();

@@ -3,6 +3,7 @@ import { uploadRateLimit, getClientIp } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const DRIVE_WEB_APP_URL = process.env.GOOGLE_DRIVE_WEB_APP_URL;
 

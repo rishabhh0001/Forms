@@ -184,7 +184,8 @@ export function BconFlow() {
           })
           .catch((e: any) => {
             setSubmitting(false);
-            setError(`Submission failed: ${e.message || "Unknown error"}. Please contact rj910@snu.edu.in with this screenshot.`);
+            const msg = e.message || "Unknown error";
+            setError(`Submission failed: ${msg}. Please take a screenshot and message +91 8826854528`);
             advancingRef.current = false;
           });
         return; // Do not reset advancingRef.current here so it prevents further submissions
@@ -733,9 +734,10 @@ function BconFileUpload({
       stopFakeProgress(false);
       setUploadState("error");
       if (err.message?.includes("Access denied: DriveApp")) {
-        setErrorMsg("Drive permissions error. Contact rj910@snu.edu.in");
+        setErrorMsg("Drive permissions error. Please take a screenshot and message +91 8826854528");
       } else {
-        setErrorMsg(err.message || "Upload failed. Please try again.");
+        const baseMsg = err.message || "Upload failed. Please try again.";
+        setErrorMsg(`${baseMsg} - Please take a screenshot and message +91 8826854528`);
       }
     } finally {
       setUploading(false);

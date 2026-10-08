@@ -40,9 +40,10 @@ export async function POST(request: Request) {
       );
     }
 
-    const maxRetries = 3;
+    const maxRetries = 5;
     let upstream: Response | null = null;
     let lastErr: any;
+    let data: any;
 
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -51,6 +52,15 @@ export async function POST(request: Request) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ filename, mimeType, base64 }),
         });
+        
+        const text = await upstream.text();
+        
+        try {
+          data = JSON.parse(text);
+        } catch (e) {
+          throw new Error(`Failed to parse response as JSON. Status: ${upstream.status}, Text: ${text.slice(0, 100)}`);
+        }
+
         if (upstream.ok || upstream.status < 500) {
           break; // Stop retrying if successful or a client error (4xx) occurs
         }
@@ -58,21 +68,14 @@ export async function POST(request: Request) {
         lastErr = e;
         console.error(`[upload] Fetch attempt ${i + 1} failed:`, e.message);
         if (i < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, 1500 * (i + 1))); // Exponential backoff
+          const jitter = Math.random() * 1000;
+          await new Promise(r => setTimeout(r, 1500 * (i + 1) + jitter)); // Exponential backoff with jitter
         }
       }
     }
 
-    if (!upstream) {
-      throw new Error(`Failed to reach Google Drive after ${maxRetries} attempts. Last error: ${lastErr?.message}`);
-    }
-
-    const text = await upstream.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (e) {
-      console.error("[upload] Failed to parse upstream response as JSON. Received text:", text.slice(0, 200));
+    if (!upstream || !data) {
+      console.error("[upload] Failed to get valid response after retries. Last error:", lastErr?.message);
       return NextResponse.json(
         { ok: false, error: "Received invalid response from Google Drive integration" }, 
         { status: 502 }

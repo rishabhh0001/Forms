@@ -58,9 +58,10 @@ export async function POST(request: Request) {
     }
 
     // 3. Forward to Apps Script, including formId so it writes to the right tab.
-    const maxRetries = 3;
+    const maxRetries = 5;
     let upstream: Response | null = null;
     let lastErr: any;
+    let data: Record<string, unknown> | null = null;
 
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -70,6 +71,15 @@ export async function POST(request: Request) {
           body: JSON.stringify({ token: SHARED_TOKEN, formId, answers }),
           cache: "no-store",
         });
+        
+        const raw = await upstream.text();
+        
+        try {
+          data = JSON.parse(raw) as Record<string, unknown>;
+        } catch (err) {
+          throw new Error(`Failed to parse response as JSON. Status: ${upstream.status}, Text: ${raw.slice(0, 100)}`);
+        }
+
         if (upstream.ok || upstream.status < 500) {
           break;
         } else {
@@ -79,32 +89,17 @@ export async function POST(request: Request) {
         lastErr = err;
         console.error(`[submit] Network error reaching Apps Script on attempt ${i + 1}:`, err.message);
         if (i < maxRetries - 1) {
-          await new Promise(r => setTimeout(r, 1500 * (i + 1)));
+          const jitter = Math.random() * 1000;
+          await new Promise(r => setTimeout(r, 1500 * (i + 1) + jitter));
         }
       }
     }
 
-    if (!upstream) {
+    if (!upstream || !data) {
+      console.error("[submit] Failed to get valid response after retries. Last error:", lastErr?.message);
       return NextResponse.json(
-        { ok: false, error: `Could not reach the Google Apps Script Web App after ${maxRetries} attempts. Last error: ${lastErr?.message}` },
+        { ok: false, error: `Could not reach the Google Apps Script Web App after ${maxRetries} attempts. Verify the Web App deployment.` },
         { status: 502 },
-      );
-    }
-
-    // 4. Parse upstream response.
-    const raw = await upstream.text();
-    let data: Record<string, unknown>;
-    try {
-      data = JSON.parse(raw) as Record<string, unknown>;
-    } catch {
-      console.error("[submit] Unparseable upstream response:", raw);
-      return NextResponse.json(
-        {
-          ok: false,
-          error: `Google Apps Script returned an unparseable response (HTTP ${upstream.status}). Verify the Web App deployment.`,
-          raw: raw.slice(0, 500),
-        },
-        { status: upstream.ok ? 500 : 502 },
       );
     }
 

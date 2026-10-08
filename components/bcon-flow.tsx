@@ -678,11 +678,9 @@ function BconFileUpload({
 
     try {
       const safeName = getFirstAttendeeName().replace(/[^a-zA-Z0-9]/g, "_");
-      // Force .jpg extension because we compress it to image/jpeg on the canvas
-      const filename = `${safeName}_${Date.now()}.jpg`;
 
       // Convert and compress file to base64
-      const base64 = await new Promise<string>((resolve, reject) => {
+      const { finalBase64, finalFilename, finalMimeType } = await new Promise<{finalBase64: string, finalFilename: string, finalMimeType: string}>((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (ev) => {
           const img = new Image();
@@ -698,14 +696,23 @@ function BconFileUpload({
             canvas.height = height;
             const ctx = canvas.getContext("2d");
             if (!ctx) {
-              // If canvas fails, we fall back to original file, but we should handle the prefix correctly
+              // If canvas fails, we fall back to original file
               const result = ev.target?.result as string;
-              resolve(result.includes(",") ? result.split(",")[1] : result);
+              const ext = file.name.split('.').pop() || "png";
+              resolve({
+                finalBase64: result.includes(",") ? result.split(",")[1] : result,
+                finalFilename: `${safeName}_${Date.now()}.${ext}`,
+                finalMimeType: file.type
+              });
               return;
             }
             ctx.drawImage(img, 0, 0, width, height);
             const dataUrl = canvas.toDataURL("image/jpeg", 0.7);
-            resolve(dataUrl.split(",")[1]);
+            resolve({
+              finalBase64: dataUrl.split(",")[1],
+              finalFilename: `${safeName}_${Date.now()}.jpg`,
+              finalMimeType: "image/jpeg"
+            });
           };
           img.onerror = reject;
           img.src = ev.target?.result as string;
@@ -717,7 +724,7 @@ function BconFileUpload({
       const res = await fetch("/api/upload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ filename, mimeType: "image/jpeg", base64 }),
+        body: JSON.stringify({ filename: finalFilename, mimeType: finalMimeType, base64: finalBase64 }),
       });
 
       const data = await res.json();

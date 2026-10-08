@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
-const WEB_APP_URL  = process.env.GOOGLE_SHEETS_WEB_APP_URL;
+const WEB_APP_URL = process.env.GOOGLE_SHEETS_WEB_APP_URL;
 const SHARED_TOKEN = process.env.GOOGLE_SHEETS_TOKEN;
 
 export async function POST(request: Request) {
@@ -71,9 +71,9 @@ export async function POST(request: Request) {
           body: JSON.stringify({ token: SHARED_TOKEN, formId, answers }),
           cache: "no-store",
         });
-        
+
         const raw = await upstream.text();
-        
+
         try {
           data = JSON.parse(raw) as Record<string, unknown>;
         } catch (err) {

@@ -29,7 +29,7 @@ export const bconQuestionSchema: Question[] = [
   {
     id: "ticket_type",
     prompt: "Ticket type",
-    helper: "Select the event you wish to register for.",
+    helper: "Select the number of passes you wish to purchase (Date: 14 November)",
     type: "multipleChoice",
     required: true,
     options: [

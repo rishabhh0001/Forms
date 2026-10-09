@@ -41,42 +41,34 @@ export async function POST(request: Request) {
       );
     }
 
-    const maxRetries = 5;
     let upstream: Response | null = null;
-    let lastErr: any;
     let data: any;
 
-    for (let i = 0; i < maxRetries; i++) {
+    try {
+      upstream = await fetch(DRIVE_WEB_APP_URL, {
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "Connection": "close" 
+        },
+        body: JSON.stringify({ filename, mimeType, base64 }),
+      });
+      
+      const text = await upstream.text();
+      
       try {
-        upstream = await fetch(DRIVE_WEB_APP_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ filename, mimeType, base64 }),
-        });
-        
-        const text = await upstream.text();
-        
-        try {
-          data = JSON.parse(text);
-        } catch (e) {
-          throw new Error(`Failed to parse response as JSON. Status: ${upstream.status}, Text: ${text.slice(0, 100)}`);
-        }
-
-        if (upstream.ok || upstream.status < 500) {
-          break; // Stop retrying if successful or a client error (4xx) occurs
-        }
-      } catch (e: any) {
-        lastErr = e;
-        console.error(`[upload] Fetch attempt ${i + 1} failed:`, e.message);
-        if (i < maxRetries - 1) {
-          const jitter = Math.random() * 1000;
-          await new Promise(r => setTimeout(r, 1500 * (i + 1) + jitter)); // Exponential backoff with jitter
-        }
+        data = JSON.parse(text);
+      } catch (e) {
+        console.error("[upload] Failed to parse JSON:", text.slice(0, 500));
+        return NextResponse.json({ ok: false, error: "Invalid JSON from Google Drive" }, { status: 502 });
       }
+    } catch (e: any) {
+      console.error(`[upload] Fetch failed:`, e.message);
+      return NextResponse.json({ ok: false, error: "Network error reaching Google Drive" }, { status: 502 });
     }
 
     if (!upstream || !data) {
-      console.error("[upload] Failed to get valid response after retries. Last error:", lastErr?.message);
+      console.error("[upload] Failed to get valid response.");
       return NextResponse.json(
         { ok: false, error: "Received invalid response from Google Drive integration" }, 
         { status: 502 }

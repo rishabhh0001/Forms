@@ -45,6 +45,9 @@ export async function POST(request: Request) {
 
     const formId = typeof body.formId === "string" ? body.formId.trim().slice(0, 50) : "";
 
+    // Log the payload so it is always preserved in Vercel logs as a fallback
+    console.log(`[submit] Processing submission | Form: ${formId || 'default'} | Payload:`, JSON.stringify(answers));
+
     // 2. Server must be configured.
     if (!WEB_APP_URL || !SHARED_TOKEN) {
       console.error("[submit] Missing GOOGLE_SHEETS_WEB_APP_URL or GOOGLE_SHEETS_TOKEN env var.");

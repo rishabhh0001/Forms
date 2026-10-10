@@ -1,4 +1,4 @@
-import { sql } from "@vercel/postgres";
+import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
 
 // Load environment variables from .env.local or .env
@@ -13,9 +13,15 @@ async function syncToSheets() {
     console.error("Missing GOOGLE_SHEETS_WEB_APP_URL or GOOGLE_SHEETS_TOKEN");
     process.exit(1);
   }
+  
+  if (!process.env.DATABASE_URL) {
+    console.error("Missing DATABASE_URL");
+    process.exit(1);
+  }
 
-  console.log("Fetching all submissions from Vercel Postgres...");
-  const { rows } = await sql`
+  console.log("Fetching all submissions from Neon Postgres...");
+  const sql = neon(process.env.DATABASE_URL);
+  const rows = await sql`
     SELECT * FROM form_submissions ORDER BY created_at ASC;
   `;
 

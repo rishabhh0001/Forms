@@ -512,7 +512,17 @@ function BconQuestion({
     >
       <p className="bcon-eyebrow">Question {String(questionNumber).padStart(2, "0")}</p>
       <h1 className="bcon-question-title">{question.prompt}</h1>
-      <p className="bcon-helper">{question.helper}</p>
+      <p className="bcon-helper">
+        {question.helper.split(/(\+91\s?\d{10})/).map((part, i) =>
+          part.match(/\+91\s?\d{10}/) ? (
+            <a key={i} href={`tel:${part.replace(/\s/g, "")}`} style={{ fontWeight: "bold", color: "inherit", textDecoration: "underline" }}>
+              {part}
+            </a>
+          ) : (
+            part
+          )
+        )}
+      </p>
 
       <div className="bcon-answer-area">
         {question.type === "multipleChoice" ? (

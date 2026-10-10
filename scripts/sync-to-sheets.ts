@@ -14,13 +14,14 @@ async function syncToSheets() {
     process.exit(1);
   }
   
-  if (!process.env.DATABASE_URL) {
-    console.error("Missing DATABASE_URL");
+  const dbUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+  if (!dbUrl) {
+    console.error("Missing POSTGRES_URL or DATABASE_URL");
     process.exit(1);
   }
 
   console.log("Fetching all submissions from Neon Postgres...");
-  const sql = neon(process.env.DATABASE_URL);
+  const sql = neon(dbUrl);
   const rows = await sql`
     SELECT * FROM form_submissions ORDER BY created_at ASC;
   `;

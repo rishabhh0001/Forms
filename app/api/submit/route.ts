@@ -51,8 +51,9 @@ export async function POST(request: Request) {
 
     // Secondary Backup: Write to Neon Postgres
     try {
-      if (process.env.DATABASE_URL) {
-        const sql = neon(process.env.DATABASE_URL);
+      const dbUrl = process.env.POSTGRES_URL || process.env.DATABASE_URL;
+      if (dbUrl) {
+        const sql = neon(dbUrl);
         
         // Create table with explicit columns for easy reading, plus full payload as backup
         await sql`
@@ -68,19 +69,21 @@ export async function POST(request: Request) {
           );
         `;
       
-      await sql`
-        INSERT INTO form_submissions (form_id, name, email, phone, ticket_type, payload)
-        VALUES (
-          ${formId || 'default'},
-          ${(answers as Record<string, any>).name ? String((answers as Record<string, any>).name) : null},
-          ${(answers as Record<string, any>).email ? String((answers as Record<string, any>).email) : null},
-          ${(answers as Record<string, any>).phone ? String((answers as Record<string, any>).phone) : null},
-          ${(answers as Record<string, any>).ticket_type ? String((answers as Record<string, any>).ticket_type) : null},
-          ${JSON.stringify(answers)}::jsonb
-        );
-      `;
+        await sql`
+          INSERT INTO form_submissions (form_id, name, email, phone, ticket_type, payload)
+          VALUES (
+            ${formId || 'default'},
+            ${(answers as Record<string, any>).name ? String((answers as Record<string, any>).name) : null},
+            ${(answers as Record<string, any>).email ? String((answers as Record<string, any>).email) : null},
+            ${(answers as Record<string, any>).phone ? String((answers as Record<string, any>).phone) : null},
+            ${(answers as Record<string, any>).ticket_type ? String((answers as Record<string, any>).ticket_type) : null},
+            ${JSON.stringify(answers)}::jsonb
+          );
+        `;
+        console.log("[submit] Backup saved to Postgres successfully.");
+      } else {
+        console.warn("[submit] No POSTGRES_URL or DATABASE_URL found. Skipping backup.");
       }
-      console.log("[submit] Backup saved to Vercel Postgres successfully.");
     } catch (dbErr: any) {
       console.error("[submit] Failed to write backup to Vercel Postgres:", dbErr.message);
       // We don't abort here so that the primary Google Sheets flow can still attempt to run

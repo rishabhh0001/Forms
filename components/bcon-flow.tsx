@@ -783,7 +783,7 @@ function BconFileUpload({
             {(() => {
               const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
               const amount = answers["ticket_type"] || "499";
-              const upiUri = `upi://pay?pa=8595144095@slc&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
+              const upiUri = `upi://pay?pa=vansh1310@oksbi&pn=Business%20Conclave&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
               const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=H&data=${encodeURIComponent(upiUri)}`;
               return (
                 <img src={qrUrl} alt="Payment QR Code" style={{ display: 'block', width: '100%', height: 'auto', borderRadius: '8px' }} onError={(e) => e.currentTarget.style.display = 'none'} />

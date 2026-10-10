@@ -101,7 +101,7 @@ export const bconQuestionSchema: Question[] = [
   {
     id: "payment_id",
     prompt: "UPI Transaction Screenshot",
-    helper: "Scan a QR code or use the UPI app to pay, then upload a screenshot of your receipt.",
+    helper: "Scan a QR code or use the UPI app to pay, then upload a screenshot of your receipt. If payment fails contact +91 9773552877 or +91 9953998910.",
     type: "file",
     required: true,
     placeholder: "Upload image...",

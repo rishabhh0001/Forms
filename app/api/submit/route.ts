@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { submitRateLimit, getClientIp } from "@/lib/rate-limit";
+import { sql } from "@vercel/postgres";
 
 /**
  * POST /api/submit
@@ -47,6 +48,39 @@ export async function POST(request: Request) {
 
     // Log the payload so it is always preserved in Vercel logs as a fallback
     console.log(`[submit] Processing submission | Form: ${formId || 'default'} | Payload:`, JSON.stringify(answers));
+
+    // Secondary Backup: Write to Vercel Postgres
+    try {
+      // Create table with explicit columns for easy reading, plus full payload as backup
+      await sql`
+        CREATE TABLE IF NOT EXISTS form_submissions (
+          id SERIAL PRIMARY KEY,
+          form_id VARCHAR(50),
+          name VARCHAR(255),
+          email VARCHAR(255),
+          phone VARCHAR(50),
+          ticket_type VARCHAR(100),
+          payload JSONB,
+          created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+      `;
+      
+      await sql`
+        INSERT INTO form_submissions (form_id, name, email, phone, ticket_type, payload)
+        VALUES (
+          ${formId || 'default'},
+          ${(answers as Record<string, any>).name ? String((answers as Record<string, any>).name) : null},
+          ${(answers as Record<string, any>).email ? String((answers as Record<string, any>).email) : null},
+          ${(answers as Record<string, any>).phone ? String((answers as Record<string, any>).phone) : null},
+          ${(answers as Record<string, any>).ticket_type ? String((answers as Record<string, any>).ticket_type) : null},
+          ${JSON.stringify(answers)}::jsonb
+        );
+      `;
+      console.log("[submit] Backup saved to Vercel Postgres successfully.");
+    } catch (dbErr: any) {
+      console.error("[submit] Failed to write backup to Vercel Postgres:", dbErr.message);
+      // We don't abort here so that the primary Google Sheets flow can still attempt to run
+    }
 
     // 2. Server must be configured.
     if (!WEB_APP_URL || !SHARED_TOKEN) {

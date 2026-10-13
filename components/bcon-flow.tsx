@@ -823,7 +823,7 @@ function BconFileUpload({
             </a>
           );
         })()}
-        <p className="bcon-mobile-upi-hint">Mobile only - opens your chosen UPI app</p>
+        <p className="bcon-mobile-upi-hint">Mobile only - opens your chosen UPI app for payment.</p>
       </div>
 
       {/* Hidden file input */}

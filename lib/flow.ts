@@ -25,6 +25,81 @@ export type Question = {
   inputMode?: "text" | "email" | "numeric" | "tel" | "search" | "url";
 };
 
+export const REGULAR_TICKET_OPTIONS: ChoiceOption[] = [
+  {
+    label: "1 Pass | ₹499",
+    description: "Standard access for 1 person (₹499)",
+    value: "499",
+  },
+  {
+    label: "2 Passes | ₹899",
+    description: "Group access for 2 people (₹899)",
+    value: "899",
+  },
+  {
+    label: "4 Passes | ₹1599",
+    description: "Group access for 4 people (₹1599)",
+    value: "1599",
+  },
+];
+
+export const FLASH_SALE_TICKET_OPTIONS: ChoiceOption[] = [
+  {
+    label: "1 Pass | ₹449",
+    description: "Standard access for 1 person (₹449)",
+    value: "449",
+  },
+  {
+    label: "2 Passes | ₹799",
+    description: "Group access for 2 people (₹799)",
+    value: "799",
+  },
+  {
+    label: "4 Passes | ₹1399",
+    description: "Group access for 4 people (₹1399)",
+    value: "1399",
+  },
+];
+
+/**
+ * Flash Sale window: 4th November, 2:55 PM (14:55:00) to 5:05 PM (17:05:59) IST.
+ * Resets at 5:06 PM (17:06:00) IST.
+ */
+export function isFlashSaleActive(nowMs: number = Date.now()): boolean {
+  const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
+  const istDate = new Date(nowMs + istOffsetMs);
+
+  const month = istDate.getUTCMonth(); // 0 = Jan, 10 = Nov
+  const day = istDate.getUTCDate();
+  const totalMinutes = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
+
+  const startMinutes = 14 * 60 + 55; // 2:55 PM IST
+  const resetMinutes = 17 * 60 + 6;  // 5:06 PM IST (active through 5:05:59 PM)
+
+  return month === 10 && day === 4 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
+}
+
+export function getNumPasses(ticketType: string | undefined): number {
+  if (ticketType === "899" || ticketType === "799") return 2;
+  if (ticketType === "1599" || ticketType === "1399") return 4;
+  return 1;
+}
+
+export function normalizeTicketPrice(
+  ticketType: string | undefined,
+  flashSale: boolean = isFlashSaleActive(),
+): string {
+  const passes = getNumPasses(ticketType);
+  if (flashSale) {
+    if (passes === 2) return "799";
+    if (passes === 4) return "1399";
+    return "449";
+  }
+  if (passes === 2) return "899";
+  if (passes === 4) return "1599";
+  return "499";
+}
+
 export const bconQuestionSchema: Question[] = [
   {
     id: "ticket_type",
@@ -32,23 +107,7 @@ export const bconQuestionSchema: Question[] = [
     helper: "Select the number of passes you wish to purchase (Date: 14 November)",
     type: "multipleChoice",
     required: true,
-    options: [
-      {
-        label: "1 Pass | ₹499",
-        description: "Standard access for 1 person (₹499)",
-        value: "499",
-      },
-      {
-        label: "2 Passes | ₹899",
-        description: "Group access for 2 people (₹899)",
-        value: "899",
-      },
-      {
-        label: "4 Passes | ₹1599",
-        description: "Group access for 4 people (₹1599)",
-        value: "1599",
-      },
-    ],
+    options: REGULAR_TICKET_OPTIONS,
     nextStep: "name",
   },
   {
@@ -119,6 +178,17 @@ export const bconQuestionSchema: Question[] = [
     nextStep: null,
   },
 ];
+
+export function getBconQuestionSchema(flashSale: boolean = isFlashSaleActive()): Question[] {
+  return bconQuestionSchema.map((q) =>
+    q.id === "ticket_type"
+      ? {
+          ...q,
+          options: flashSale ? FLASH_SALE_TICKET_OPTIONS : REGULAR_TICKET_OPTIONS,
+        }
+      : q,
+  );
+}
 
 export const dummyQuestionSchema: Question[] = [
   {

@@ -5,12 +5,15 @@ import { type KeyboardEvent, useEffect, useMemo, useRef, useState } from "react"
 import {
   type AnswerMap,
   type ChoiceOption,
+  getBconQuestionSchema,
+  getNumPasses,
   getQuestionByIndex,
+  isFlashSaleActive,
   isValidEmail,
+  normalizeTicketPrice,
   resolveNextQuestionIndex,
   startQuestionIndex,
   validateQuestion,
-  bconQuestionSchema,
 } from "../lib/flow";
 import UploadIcon from "./icons/upload-icon";
 import "./bcon.css";
@@ -28,22 +31,41 @@ export function BconFlow() {
   const [history, setHistory] = useState<number[]>([]);
   const [direction, setDirection] = useState<1 | -1>(1);
   const [error, setError] = useState<string | null>(null);
+  const [isFlashSale, setIsFlashSale] = useState(() => isFlashSaleActive());
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const reducedMotion = useReducedMotion();
   const advancingRef = useRef(false);
   const rm = false; // Override reduced motion to ensure animations play
 
-  const journeyLength = bconQuestionSchema.length;
+  const activeSchema = useMemo(() => getBconQuestionSchema(isFlashSale), [isFlashSale]);
+  const journeyLength = activeSchema.length;
   const currentStep = history.length + 1;
   const progress = useMemo(
     () => (started ? (currentStep / journeyLength) * 100 : 0),
     [started, currentStep, journeyLength],
   );
 
+  useEffect(() => {
+    const syncFlashSale = () => {
+      const active = isFlashSaleActive();
+      setIsFlashSale((prev) => (prev !== active ? active : prev));
+      setAnswers((prev) => {
+        if (!prev["ticket_type"]) return prev;
+        const normalized = normalizeTicketPrice(prev["ticket_type"], active);
+        if (normalized === prev["ticket_type"]) return prev;
+        return { ...prev, ticket_type: normalized };
+      });
+    };
+
+    syncFlashSale();
+    const timer = window.setInterval(syncFlashSale, 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   async function submitForm(finalAnswers: AnswerMap, retries = 3) {
-    let numPasses = 1;
-    if (finalAnswers["ticket_type"] === "899") numPasses = 2;
-    if (finalAnswers["ticket_type"] === "1599") numPasses = 4;
+    const activeSale = isFlashSaleActive();
+    const normalizedTicketType = normalizeTicketPrice(finalAnswers["ticket_type"], activeSale);
+    const numPasses = getNumPasses(normalizedTicketType);
 
     const parseMulti = (val: string | undefined): string[] => {
       if (!val) return [];
@@ -60,9 +82,9 @@ export function BconFlow() {
     const rollNumbers = parseMulti(finalAnswers["roll_number"]);
 
     for (let i = 0; i < numPasses; i++) {
-      const payload = { ...finalAnswers };
+      const payload: AnswerMap = { ...finalAnswers, ticket_type: normalizedTicketType };
       if (numPasses > 1) {
-        payload["ticket_type"] = `${finalAnswers["ticket_type"]} - Attendee ${i + 1}`;
+        payload["ticket_type"] = `${normalizedTicketType} - Attendee ${i + 1}`;
         payload["name"] = names[i] || names[0] || "";
         payload["email"] = emails[i] || emails[0] || "";
         payload["phone"] = phones[i] || phones[0] || "";
@@ -102,7 +124,16 @@ export function BconFlow() {
         return;
       }
 
-      if (saved.answers && Object.keys(saved.answers).length > 0) setAnswers(saved.answers);
+      if (saved.answers && Object.keys(saved.answers).length > 0) {
+        const restoredAnswers = { ...saved.answers };
+        if (restoredAnswers["ticket_type"]) {
+          restoredAnswers["ticket_type"] = normalizeTicketPrice(
+            restoredAnswers["ticket_type"],
+            isFlashSaleActive(),
+          );
+        }
+        setAnswers(restoredAnswers);
+      }
       if (saved.index !== undefined) setIndex(saved.index);
       if (saved.history) setHistory(saved.history);
       if (saved.started) setStarted(saved.started);
@@ -125,7 +156,7 @@ export function BconFlow() {
     return () => window.clearTimeout(t);
   }, [started, submitted, index]);
 
-  const question = started && !submitted ? getQuestionByIndex(bconQuestionSchema, index) : null;
+  const question = started && !submitted ? getQuestionByIndex(activeSchema, index) : null;
   const value = question ? (answers[question.id] ?? "") : "";
 
 
@@ -169,7 +200,7 @@ export function BconFlow() {
 
       setAnswers((prev: AnswerMap) => ({ ...prev, [question.id]: nextValue }));
       setError(null);
-      const nextIndex = resolveNextQuestionIndex(bconQuestionSchema, index, nextValue, answers);
+      const nextIndex = resolveNextQuestionIndex(activeSchema, index, nextValue, answers);
       if (nextIndex === null) {
         const btn = document.querySelector<HTMLElement>("[data-submit-button]");
         const rect = btn?.getBoundingClientRect();
@@ -292,6 +323,7 @@ export function BconFlow() {
                   value={value}
                   answers={answers}
                   error={error}
+                  isFlashSale={isFlashSale}
                   inputRef={inputRef}
                   direction={direction}
                   slide={slide}
@@ -447,6 +479,7 @@ type BconQuestionProps = {
   value: string;
   answers: AnswerMap;
   error: string | null;
+  isFlashSale: boolean;
   inputRef: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>;
   direction: 1 | -1;
   slide: Variants;
@@ -457,7 +490,7 @@ type BconQuestionProps = {
 };
 
 function BconQuestion({
-  question, questionNumber, value, answers, error,
+  question, questionNumber, value, answers, error, isFlashSale,
   inputRef, direction, slide,
   onChange, onChoose, onNext, onKeyDown,
 }: BconQuestionProps) {
@@ -476,9 +509,7 @@ function BconQuestion({
   };
 
   const isMultiInput = ["name", "email", "phone", "roll_number"].includes(question.id);
-  let numPasses = 1;
-  if (answers["ticket_type"] === "899") numPasses = 2;
-  if (answers["ticket_type"] === "1599") numPasses = 4;
+  const numPasses = getNumPasses(answers["ticket_type"]);
 
   let multiValues = [value];
   if (isMultiInput && numPasses > 1) {
@@ -555,6 +586,7 @@ function BconQuestion({
             question={question}
             value={value}
             answers={answers}
+            isFlashSale={isFlashSale}
             getFirstAttendeeName={getFirstAttendeeName}
             uploading={uploading}
             setUploading={setUploading}
@@ -626,6 +658,7 @@ type BconFileUploadProps = {
   question: NonNullable<ReturnType<typeof getQuestionByIndex>>;
   value: string;
   answers: AnswerMap;
+  isFlashSale: boolean;
   getFirstAttendeeName: () => string;
   uploading: boolean;
   setUploading: (v: boolean) => void;
@@ -633,7 +666,7 @@ type BconFileUploadProps = {
 };
 
 function BconFileUpload({
-  question, value, answers, getFirstAttendeeName,
+  question, value, answers, isFlashSale, getFirstAttendeeName,
   uploading, setUploading, onChange,
 }: BconFileUploadProps) {
   const [dragOver, setDragOver] = useState(false);
@@ -783,6 +816,7 @@ function BconFileUpload({
   const circleR = 38;
   const circleC = 2 * Math.PI * circleR;
   const dashOffset = circleC - (uploadProgress / 100) * circleC;
+  const activeAmount = normalizeTicketPrice(answers["ticket_type"], isFlashSale);
 
   return (
     <div className="bcon-file-upload">
@@ -792,7 +826,7 @@ function BconFileUpload({
           <div className="bcon-qr-box" style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
             {(() => {
               const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
-              const amount = answers["ticket_type"] || "499";
+              const amount = activeAmount;
               const upiUri = `upi://pay?pa=8595144095@ptyes&pn=Arnav%20Bhatia&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
               const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=400x400&margin=2&ecc=H&data=${encodeURIComponent(upiUri)}`;
               return (
@@ -801,7 +835,7 @@ function BconFileUpload({
             })()}
           </div>
           <span className="bcon-qr-label" style={{ marginTop: '12px', display: 'block', fontWeight: 600 }}>
-            Scan to Pay ₹{answers["ticket_type"] || "499"}
+            Scan to Pay ₹{activeAmount}
           </span>
         </div>
       </div>
@@ -815,7 +849,7 @@ function BconFileUpload({
         </div>
         {(() => {
           const firstName = getFirstAttendeeName().trim().split(/\s+/)[0];
-          const amount = answers["ticket_type"] || "499";
+          const amount = activeAmount;
           const upiUri = `upi://pay?pa=8595144095@ptyes&pn=Arnav%20Bhatia&cu=INR&tn=${firstName}_BCON26&am=${amount}`;
           return (
             <a href={upiUri} className="bcon-mobile-upi-btn">

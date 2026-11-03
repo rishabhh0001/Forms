@@ -3,6 +3,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import localFont from 'next/font/local';
 import { Spotlight } from "@/components/home/spotlight";
+import { PassesGrid } from "@/components/home/passes-grid";
 import "./home.css";
 
 const borel = localFont({ src: '../public/Borel-Regular.ttf', variable: '--font-borel', display: 'swap' });
@@ -18,12 +19,6 @@ export const metadata: Metadata = {
     url: "/",
   },
 };
-
-const PASSES = [
-  { name: "1 Pass", people: "Just you", price: 499, perHead: 499, save: 0 },
-  { name: "2 Passes", people: "You + a friend", price: 899, perHead: 450, save: 99, featured: true },
-  { name: "4 Passes", people: "Bring the squad", price: 1599, perHead: 400, save: 397 },
-];
 
 const STEPS = [
   { n: "01", title: "Pick your pass", body: "One, two or four attendees. Group passes cost less per person." },
@@ -170,31 +165,7 @@ export default function LandingPage() {
               Bring friends and <em>pay less.</em>
             </h2>
           </header>
-          <div className="hp-passes">
-            {PASSES.map((p) => (
-              <Link
-                key={p.name}
-                href="/bcon"
-                className={`hp-pass ${p.featured ? "hp-pass-featured" : ""}`}
-                id={`hp-pass-${p.price}`}
-                data-spot
-              >
-                {p.featured ? <span className="hp-pass-badge">Best for pairs</span> : null}
-                <span className="hp-pass-name">{p.name}</span>
-                <span className="hp-pass-people">{p.people}</span>
-                <span className="hp-pass-price">
-                  <small>₹</small>
-                  {p.price.toLocaleString("en-IN")}
-                </span>
-                <span className="hp-pass-per">
-                  {p.save > 0 ? <>≈ ₹{p.perHead} per person · <b>save ₹{p.save}</b></> : <>Standard access</>}
-                </span>
-                <span className="hp-pass-cta">
-                  Choose {p.name.toLowerCase()} <span aria-hidden="true">→</span>
-                </span>
-              </Link>
-            ))}
-          </div>
+          <PassesGrid />
         </section>
 
         {/* ── How it works ── */}

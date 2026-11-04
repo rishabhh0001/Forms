@@ -73,10 +73,10 @@ export function isFlashSaleActive(nowMs: number = Date.now()): boolean {
   const day = istDate.getUTCDate();
   const totalMinutes = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
 
-  const startMinutes = 14 * 60 + 5; // 2:55 PM IST
-  const resetMinutes = 17 * 60 + 6;  // 5:06 PM IST (active through 5:05:59 PM)
+  const startMinutes = 21 * 60 + 12; // 9:12 PM IST
+  const resetMinutes = 22 * 60 + 1;  // 10:01 PM IST (active through 5:05:59 PM)
 
-  return month === 10 && day === 5 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
+  return month === 10 && day === 4 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
 }
 
 export function getNumPasses(ticketType: string | undefined): number {
@@ -183,9 +183,9 @@ export function getBconQuestionSchema(flashSale: boolean = isFlashSaleActive()):
   return bconQuestionSchema.map((q) =>
     q.id === "ticket_type"
       ? {
-          ...q,
-          options: flashSale ? FLASH_SALE_TICKET_OPTIONS : REGULAR_TICKET_OPTIONS,
-        }
+        ...q,
+        options: flashSale ? FLASH_SALE_TICKET_OPTIONS : REGULAR_TICKET_OPTIONS,
+      }
       : q,
   );
 }

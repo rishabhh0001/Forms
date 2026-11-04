@@ -76,7 +76,7 @@ export function isFlashSaleActive(nowMs: number = Date.now()): boolean {
   const startMinutes = 14 * 60 + 5; // 2:55 PM IST
   const resetMinutes = 17 * 60 + 6;  // 5:06 PM IST (active through 5:05:59 PM)
 
-  return month === 10 && day === 4 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
+  return month === 10 && day === 5 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
 }
 
 export function getNumPasses(ticketType: string | undefined): number {

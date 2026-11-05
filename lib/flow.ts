@@ -62,8 +62,8 @@ export const FLASH_SALE_TICKET_OPTIONS: ChoiceOption[] = [
 ];
 
 /**
- * Flash Sale window: 5th November 10:01 AM to 9:45 PM IST.
- * Resets at 9:46 PM IST.
+ * Flash Sale window: 5th November 10:01 AM to 11:58 PM IST.
+ * Resets at 11:59 PM IST.
  */
 export function isFlashSaleActive(nowMs: number = Date.now()): boolean {
   const istOffsetMs = (5 * 60 + 30) * 60 * 1000;
@@ -74,7 +74,7 @@ export function isFlashSaleActive(nowMs: number = Date.now()): boolean {
   const totalMinutes = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
 
   const startMinutes = 10 * 60 + 1; // 10:01 AM IST
-  const resetMinutes = 21 * 60 + 46;  // 09:46 PM IST
+  const resetMinutes = 23 * 60 + 59;  // 11:59 PM IST
 
   return month === 10 && day === 5 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
 }

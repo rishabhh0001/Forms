@@ -74,7 +74,7 @@ export function isFlashSaleActive(nowMs: number = Date.now()): boolean {
   const totalMinutes = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
 
   const startMinutes = 12 * 60 + 36; // 12:36 PM IST
-  const resetMinutes = 20 * 60 + 59;  // 8:59 PM IST
+  const resetMinutes = 23 * 60 + 45;  // 11:59 PM IST
 
   return month === 10 && day === 12 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
 }

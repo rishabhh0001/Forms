@@ -457,7 +457,7 @@ function BconIntro({ onBegin, rm, isClosed }: { onBegin: () => void; rm: boolean
           </p>
           <p className="bcon-sold-out-contact">
             For any further changes or queries, contact{" "}
-            <a href="mailto:inspiria.scs@snu.edu.in">inspiria.scs@snu.edu.in</a>
+            <a href="tel:8826854528">8826854528</a>
           </p>
         </motion.div>
       ) : (

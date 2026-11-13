@@ -66,7 +66,7 @@ export const FLASH_SALE_TICKET_OPTIONS: ChoiceOption[] = [
  * Resets at 09:00 PM IST.
  */
 /**
- * Registrations close: 13th November 2026 at 6:05 PM IST (18:05 IST).
+ * Registrations close: 13th November 2026 at 8:05 PM IST (20:05 IST).
  * All further submissions are rejected and the form displays a sold-out notice.
  */
 export function isFormClosed(nowMs: number = Date.now()): boolean {
@@ -82,7 +82,7 @@ export function isFormClosed(nowMs: number = Date.now()): boolean {
   if (year === 2026 && month > 10) return true;
   if (year === 2026 && month === 10) {
     if (day > 13) return true;
-    if (day === 13 && totalMinutes >= 18 * 60 + 5) return true;
+    if (day === 13 && totalMinutes >= 20 * 60 + 5) return true;
   }
   return false;
 }
@@ -97,7 +97,7 @@ export function isFlashSaleActive(nowMs: number = Date.now()): boolean {
   const totalMinutes = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
 
   const startMinutes = 1 * 60 + 1; // 1:01 AM IST
-  const resetMinutes = 18 * 60 + 5;  // 6:05 PM IST
+  const resetMinutes = 20 * 60 + 5;  // 6:05 PM IST
 
   return month === 10 && day === 13 && totalMinutes >= startMinutes && totalMinutes < resetMinutes;
 }

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { submitRateLimit, getClientIp } from "@/lib/rate-limit";
+import { isFormClosed } from "@/lib/flow";
 import { neon } from "@neondatabase/serverless";
 
 /**
@@ -18,6 +19,16 @@ export async function POST(request: Request) {
     const ip = getClientIp(request);
     if (!submitRateLimit.check(ip)) {
       return NextResponse.json({ ok: false, error: "Too many requests. Please try again later." }, { status: 429, headers: { "Retry-After": "60" } });
+    }
+
+    if (isFormClosed()) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Registrations are now closed as we are completely sold out. For any queries, contact inspiria.scs@snu.edu.in.",
+        },
+        { status: 403 },
+      );
     }
 
     let body: { formId?: unknown; answers?: unknown };

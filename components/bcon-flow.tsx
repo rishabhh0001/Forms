@@ -9,6 +9,7 @@ import {
   getNumPasses,
   getQuestionByIndex,
   isFlashSaleActive,
+  isFormClosed,
   isValidEmail,
   normalizeTicketPrice,
   resolveNextQuestionIndex,
@@ -32,6 +33,7 @@ export function BconFlow() {
   const [direction, setDirection] = useState<1 | -1>(1);
   const [error, setError] = useState<string | null>(null);
   const [isFlashSale, setIsFlashSale] = useState(() => isFlashSaleActive());
+  const [isClosed, setIsClosed] = useState(() => isFormClosed());
   const inputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const reducedMotion = useReducedMotion();
   const advancingRef = useRef(false);
@@ -46,7 +48,10 @@ export function BconFlow() {
   );
 
   useEffect(() => {
-    const syncFlashSale = () => {
+    const syncStatus = () => {
+      const closed = isFormClosed();
+      setIsClosed((prev) => (prev !== closed ? closed : prev));
+
       const active = isFlashSaleActive();
       setIsFlashSale((prev) => (prev !== active ? active : prev));
       setAnswers((prev) => {
@@ -57,12 +62,15 @@ export function BconFlow() {
       });
     };
 
-    syncFlashSale();
-    const timer = window.setInterval(syncFlashSale, 1000);
+    syncStatus();
+    const timer = window.setInterval(syncStatus, 1000);
     return () => window.clearInterval(timer);
   }, []);
 
   async function submitForm(finalAnswers: AnswerMap, retries = 3) {
+    if (isFormClosed()) {
+      throw new Error("Registrations are now closed as we are completely sold out.");
+    }
     const activeSale = isFlashSaleActive();
     const normalizedTicketType = normalizeTicketPrice(finalAnswers["ticket_type"], activeSale);
     const numPasses = getNumPasses(normalizedTicketType);
@@ -162,6 +170,7 @@ export function BconFlow() {
 
 
   function begin() {
+    if (isClosed) return;
     setStarted(true); setSubmitted(false); setSubmitting(false);
     setError(null);
     setDirection(1);
@@ -312,7 +321,7 @@ export function BconFlow() {
         <div className="bcon-content">
           <AnimatePresence mode="wait" custom={direction}>
             {!started && !submitted
-              ? <BconIntro key="intro" onBegin={begin} rm={rm} />
+              ? <BconIntro key="intro" onBegin={begin} rm={rm} isClosed={isClosed} />
               : null}
             {question
               ? (
@@ -411,7 +420,7 @@ function Logo2026({ rm }: { rm: boolean }) {
   );
 }
 
-function BconIntro({ onBegin, rm }: { onBegin: () => void; rm: boolean }) {
+function BconIntro({ onBegin, rm, isClosed }: { onBegin: () => void; rm: boolean; isClosed?: boolean }) {
   return (
     <motion.div
       className="bcon-intro"
@@ -435,40 +444,64 @@ function BconIntro({ onBegin, rm }: { onBegin: () => void; rm: boolean }) {
         <Logo2026 rm={rm} />
       </motion.div>
 
-      <motion.div
-        className="bcon-intro-label"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: rm ? 0 : 0.5, delay: 0.35 }}
-      >
-        <p className="bcon-intro-copy">
-          Fill in your details below to secure your spot.
-        </p>
-      </motion.div>
+      {isClosed ? (
+        <motion.div
+          className="bcon-sold-out-card"
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: rm ? 0 : 0.5, delay: 0.3 }}
+        >
+          <span className="bcon-sold-out-badge">Registration Closed</span>
+          <p className="bcon-sold-out-text">
+            We regret to inform you that we are <strong>all sold out!</strong>
+          </p>
+          <p className="bcon-sold-out-contact">
+            For any further changes or queries, contact{" "}
+            <a href="mailto:inspiria.scs@snu.edu.in">inspiria.scs@snu.edu.in</a>
+          </p>
+        </motion.div>
+      ) : (
+        <motion.div
+          className="bcon-intro-label"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: rm ? 0 : 0.5, delay: 0.35 }}
+        >
+          <p className="bcon-intro-copy">
+            Fill in your details below to secure your spot.
+          </p>
+        </motion.div>
+      )}
 
       <motion.button
         type="button"
-        className="bcon-start-btn"
+        className={`bcon-start-btn ${isClosed ? "bcon-btn-disabled" : ""}`}
         id="bcon-register-btn"
         onClick={onBegin}
+        disabled={isClosed}
+        aria-disabled={isClosed}
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: rm ? 0 : 0.45, delay: 0.5 }}
-        whileHover={rm ? undefined : { y: -4, scale: 1.03 }}
-        whileTap={{ y: 1, scale: 0.97 }}
+        whileHover={rm || isClosed ? undefined : { y: -4, scale: 1.03 }}
+        whileTap={isClosed ? undefined : { y: 1, scale: 0.97 }}
       >
         <span className="bcon-start-btn-glow" aria-hidden="true" />
-        <span className="bcon-start-btn-label">Register Now <b>↗</b></span>
+        <span className="bcon-start-btn-label">
+          {isClosed ? "Sold Out" : <>Register Now <b>↗</b></>}
+        </span>
       </motion.button>
 
-      <motion.p
-        className="bcon-key-hint"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.65, duration: rm ? 0 : 0.4 }}
-      >
-        <kbd>Enter</kbd> to begin
-      </motion.p>
+      {!isClosed && (
+        <motion.p
+          className="bcon-key-hint"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.65, duration: rm ? 0 : 0.4 }}
+        >
+          <kbd>Enter</kbd> to begin
+        </motion.p>
+      )}
     </motion.div>
   );
 }

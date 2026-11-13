@@ -361,11 +361,57 @@
   animation: bcon-btn-halo 3s ease-in-out infinite;
   pointer-events: none;
 }
-.bcon-start-btn:hover {
-  border-color: rgba(207,175,137,0.82);
-  background: rgba(45,17,71,0.9);
-  box-shadow: 0 10px 42px rgba(186,39,206,0.35), inset 0 1px 0 rgba(207,175,137,0.18);
+.bcon-start-btn:disabled,
+.bcon-start-btn.bcon-btn-disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.5);
+  box-shadow: none;
+  border-color: rgba(255, 255, 255, 0.2);
 }
+.bcon-sold-out-card {
+  max-width: 520px;
+  margin: 18px auto 26px;
+  padding: 18px 22px;
+  background: rgba(255, 102, 196, 0.08);
+  border: 1px solid rgba(255, 102, 196, 0.35);
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.bcon-sold-out-badge {
+  display: inline-block;
+  font-family: "Cinzel", serif;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--bcon-gold);
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+.bcon-sold-out-text {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--bcon-ink);
+}
+.bcon-sold-out-text strong {
+  color: var(--bcon-gold);
+}
+.bcon-sold-out-contact {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--bcon-muted);
+}
+.bcon-sold-out-contact a {
+  color: var(--bcon-gold);
+  text-decoration: underline;
+  font-weight: 600;
+  word-break: break-all;
+}
+
 .bcon-start-btn-glow {
   position: absolute;
   inset: 0;
